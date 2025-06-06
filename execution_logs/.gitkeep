@@ -1,0 +1,15 @@
+# Execution Logs Directory
+
+This directory contains the execution logs from workflow runs for easier analysis.
+
+## Log Structure
+
+Each workflow execution generates a log file with the format:
+`{workflow_name}_{workflow_id}_{timestamp}.json`
+
+The logs contain:
+- Execution metadata (start time, duration, status)
+- Node-by-node execution details
+- Error information and stack traces
+- Input/output data for each node
+- Performance metrics

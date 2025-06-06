@@ -1,0 +1,218 @@
+{
+  "id": "1749182392516-ju6lhmyge",
+  "name": "my_awesome_workflow2",
+  "nodes": [
+    {
+      "id": "text-input-1",
+      "type": "input",
+      "name": "Text Input",
+      "position": {
+        "x": 100,
+        "y": 100
+      },
+      "data": {
+        "inputType": "text",
+        "value": "Hello from enhanced workflow! 🚀"
+      },
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "output",
+          "name": "Text Value",
+          "type": "output",
+          "dataType": "string",
+          "description": "Text input value"
+        }
+      ],
+      "metadata": {
+        "tags": ["input", "text", "enhanced"],
+        "documentation": "Enhanced text input with default value"
+      }
+    },
+    {
+      "id": "processor-1",
+      "type": "processor",
+      "name": "Text Processor",
+      "position": {
+        "x": 400,
+        "y": 100
+      },
+      "data": {
+        "operation": "uppercase",
+        "prefix": "[ENHANCED] "
+      },
+      "inputs": [
+        {
+          "id": "text-input",
+          "name": "Text",
+          "type": "input",
+          "dataType": "string",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "id": "processed-text",
+          "name": "Processed Text",
+          "type": "output",
+          "dataType": "string",
+          "description": "Processed text output"
+        }
+      ],
+      "metadata": {
+        "tags": ["processor", "text", "transform"],
+        "documentation": "Processes text with uppercase and prefix"
+      }
+    },
+    {
+      "id": "number-input-1",
+      "type": "input",
+      "name": "Number Input",
+      "position": {
+        "x": 100,
+        "y": 300
+      },
+      "data": {
+        "inputType": "number",
+        "value": 42
+      },
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "output",
+          "name": "Number Value",
+          "type": "output",
+          "dataType": "number",
+          "description": "Number input value"
+        }
+      ],
+      "metadata": {
+        "tags": ["input", "number", "enhanced"],
+        "documentation": "Enhanced number input with default value 42"
+      }
+    },
+    {
+      "id": "calculator-1",
+      "type": "calculator",
+      "name": "Enhanced Calculator",
+      "position": {
+        "x": 400,
+        "y": 300
+      },
+      "data": {
+        "operation": "multiply",
+        "multiplier": 2
+      },
+      "inputs": [
+        {
+          "id": "number-input",
+          "name": "Number",
+          "type": "input",
+          "dataType": "number",
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "id": "calculated-result",
+          "name": "Result",
+          "type": "output",
+          "dataType": "number",
+          "description": "Calculated result"
+        }
+      ],
+      "metadata": {
+        "tags": ["calculator", "math", "enhanced"],
+        "documentation": "Multiplies input by 2"
+      }
+    },
+    {
+      "id": "output-1",
+      "type": "output",
+      "name": "Final Output",
+      "position": {
+        "x": 700,
+        "y": 200
+      },
+      "data": {
+        "format": "json"
+      },
+      "inputs": [
+        {
+          "id": "text-input",
+          "name": "Text Result",
+          "type": "input",
+          "dataType": "string",
+          "required": false
+        },
+        {
+          "id": "number-input",
+          "name": "Number Result",
+          "type": "input",
+          "dataType": "number",
+          "required": false
+        }
+      ],
+      "outputs": [],
+      "metadata": {
+        "tags": ["output", "final", "enhanced"],
+        "documentation": "Enhanced output with multiple inputs"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-1",
+      "sourceNodeId": "text-input-1",
+      "sourcePortId": "output",
+      "targetNodeId": "processor-1",
+      "targetPortId": "text-input"
+    },
+    {
+      "id": "conn-2",
+      "sourceNodeId": "processor-1",
+      "sourcePortId": "processed-text",
+      "targetNodeId": "output-1",
+      "targetPortId": "text-input"
+    },
+    {
+      "id": "conn-3",
+      "sourceNodeId": "number-input-1",
+      "sourcePortId": "output",
+      "targetNodeId": "calculator-1",
+      "targetPortId": "number-input"
+    },
+    {
+      "id": "conn-4",
+      "sourceNodeId": "calculator-1",
+      "sourcePortId": "calculated-result",
+      "targetNodeId": "output-1",
+      "targetPortId": "number-input"
+    }
+  ],
+  "variables": [
+    {
+      "id": "var-1",
+      "name": "enhancedMode",
+      "type": "boolean",
+      "value": true,
+      "description": "Enhanced workflow mode flag"
+    },
+    {
+      "id": "var-2",
+      "name": "workflowVersion",
+      "type": "string",
+      "value": "2.0.0-enhanced",
+      "description": "Enhanced workflow version"
+    }
+  ],
+  "settings": {
+    "name": "my_awesome_workflow2",
+    "version": "2.0.0",
+    "description": "🚀 ENHANCED workflow with multiple node types and connections!"
+  },
+  "createdAt": "2025-06-06T04:00:00.191Z",
+  "updatedAt": "2025-06-06T06:30:00.000Z",
+  "version": "2.0.0",
+  "tags": ["enhanced", "test", "force-update", "multi-node", "connected"]
+}

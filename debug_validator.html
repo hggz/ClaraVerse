@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Validator Debug Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f7fa;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .section {
+            margin: 25px 0;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e0e6ed;
+        }
+        .section h2 {
+            color: #34495e;
+            margin-top: 0;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        button.success {
+            background: #27ae60;
+        }
+        button.success:hover {
+            background: #229954;
+        }
+        button.danger {
+            background: #e74c3c;
+        }
+        button.danger:hover {
+            background: #c0392b;
+        }
+        button.warning {
+            background: #f39c12;
+        }
+        button.warning:hover {
+            background: #e67e22;
+        }
+        #output {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success { color: #2ecc71; }
+        .error { color: #e74c3c; }
+        .warning { color: #f39c12; }
+        .info { color: #3498db; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Validator Debug Tool</h1>
+        <p>This tool helps debug validation issues by testing the validator with known good and bad data.</p>
+
+        <div class="section">
+            <h2>🔍 Test Validation System</h2>
+            <button onclick="testValidWorkflow()" class="success">✅ Test Valid Workflow</button>
+            <button onclick="testInvalidWorkflow()" class="danger">❌ Test Invalid Workflow</button>
+            <button onclick="testCurrentSyncFile()" class="warning">📄 Test Current Sync File</button>
+            <button onclick="clearLog()">🧹 Clear Log</button>
+        </div>
+
+        <div id="output">Click a test button to start validation testing...</div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅ ' : type === 'warning' ? '⚠️ ' : 'ℹ️ ';
+            output.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('output').textContent = '';
+        }
+
+        // Simple validator implementation (mirroring the SDK validator logic)
+        function validateFlow(flowData) {
+            const errors = [];
+            const warnings = [];
+
+            log('🔍 Starting flow validation...', 'info');
+            log(`📊 Flow name: ${flowData.name || 'Unknown'}`);
+            log(`📊 Nodes: ${flowData.nodes?.length || 0}`);
+            log(`📊 Connections: ${flowData.connections?.length || 0}`);
+
+            // Basic structure validation
+            if (!flowData || typeof flowData !== 'object') {
+                errors.push('Flow data must be a valid object');
+                return { isValid: false, errors, warnings };
+            }
+
+            if (!flowData.name) {
+                errors.push('Missing required field: name');
+            }
+
+            if (!Array.isArray(flowData.nodes)) {
+                errors.push('Nodes must be an array');
+            }
+
+            if (!Array.isArray(flowData.connections)) {
+                errors.push('Connections must be an array');
+            }
+
+            // Node validation
+            if (flowData.nodes) {
+                for (let i = 0; i < flowData.nodes.length; i++) {
+                    const node = flowData.nodes[i];
+                    const nodeContext = `Node ${i + 1}`;
+
+                    if (!node.id) {
+                        errors.push(`${nodeContext}: Missing required field 'id'`);
+                    }
+                    if (!node.type) {
+                        errors.push(`${nodeContext}: Missing required field 'type'`);
+                    }
+                    if (!node.name) {
+                        warnings.push(`${nodeContext}: Missing name field`);
+                    }
+                }
+            }
+
+            // Connection validation (this is the key part!)
+            if (flowData.connections) {
+                const nodeMap = new Map(flowData.nodes?.map(n => [n.id, n]) || []);
+                
+                for (let i = 0; i < flowData.connections.length; i++) {
+                    const connection = flowData.connections[i];
+                    const connContext = `Connection ${i}`;
+
+                    log(`🔗 Validating ${connContext}:`, 'info');
+                    log(`   Connection object: ${JSON.stringify(connection)}`);
+
+                    // Required fields check
+                    const requiredFields = ['sourceNodeId', 'targetNodeId'];
+                    for (const field of requiredFields) {
+                        log(`   Checking field '${field}': ${connection[field] || 'MISSING'}`);
+                        if (!connection[field]) {
+                            errors.push(`${connContext} is missing ${field === 'sourceNodeId' ? 'source node ID' : 'target node ID'}`);
+                        }
+                    }
+
+                    // Node existence check
+                    if (connection.sourceNodeId && !nodeMap.has(connection.sourceNodeId)) {
+                        errors.push(`${connContext}: Source node '${connection.sourceNodeId}' not found`);
+                    }
+
+                    if (connection.targetNodeId && !nodeMap.has(connection.targetNodeId)) {
+                        errors.push(`${connContext}: Target node '${connection.targetNodeId}' not found`);
+                    }
+                }
+            }
+
+            const isValid = errors.length === 0;
+            
+            log(`\n📋 Validation Summary:`, 'info');
+            log(`Valid: ${isValid}`, isValid ? 'success' : 'error');
+            log(`Errors: ${errors.length}`, errors.length > 0 ? 'error' : 'success');
+            log(`Warnings: ${warnings.length}`, warnings.length > 0 ? 'warning' : 'success');
+
+            if (errors.length > 0) {
+                log('\n❌ ERRORS:', 'error');
+                errors.forEach(error => log(`  - ${error}`, 'error'));
+            }
+
+            if (warnings.length > 0) {
+                log('\n⚠️ WARNINGS:', 'warning');
+                warnings.forEach(warning => log(`  - ${warning}`, 'warning'));
+            }
+
+            return { isValid, errors, warnings };
+        }
+
+        function testValidWorkflow() {
+            log('🧪 Testing VALID workflow...', 'info');
+            log('=' * 50);
+            
+            const validWorkflow = {
+                name: "Test Valid Workflow",
+                nodes: [
+                    {
+                        id: "input-1",
+                        type: "input",
+                        name: "Test Input"
+                    },
+                    {
+                        id: "output-1", 
+                        type: "output",
+                        name: "Test Output"
+                    }
+                ],
+                connections: [
+                    {
+                        id: "conn-1",
+                        sourceNodeId: "input-1",
+                        sourcePortId: "output",
+                        targetNodeId: "output-1",
+                        targetPortId: "input"
+                    }
+                ]
+            };
+
+            const result = validateFlow(validWorkflow);
+            
+            if (result.isValid) {
+                log('\n✅ VALID workflow test passed!', 'success');
+            } else {
+                log('\n❌ VALID workflow test FAILED!', 'error');
+            }
+        }
+
+        function testInvalidWorkflow() {
+            log('🧪 Testing INVALID workflow...', 'info');
+            log('=' * 50);
+            
+            const invalidWorkflow = {
+                name: "Test Invalid Workflow",
+                nodes: [
+                    {
+                        id: "input-1",
+                        type: "input",
+                        name: "Test Input"
+                    },
+                    {
+                        id: "output-1",
+                        type: "output", 
+                        name: "Test Output"
+                    }
+                ],
+                connections: [
+                    {
+                        id: "conn-1",
+                        // Missing sourceNodeId and targetNodeId on purpose
+                        sourcePortId: "output",
+                        targetPortId: "input"
+                    }
+                ]
+            };
+
+            const result = validateFlow(invalidWorkflow);
+            
+            if (!result.isValid && result.errors.some(e => e.includes('missing source node ID'))) {
+                log('\n✅ INVALID workflow test passed! (correctly detected missing fields)', 'success');
+            } else {
+                log('\n❌ INVALID workflow test FAILED!', 'error');
+            }
+        }
+
+        async function testCurrentSyncFile() {
+            log('🧪 Testing CURRENT sync file...', 'info');
+            log('=' * 50);
+            
+            try {
+                const response = await fetch('/workflow_sync/my_awesome_workflow2_1749182392516-ju6lhmyge.json');
+                const workflow = await response.json();
+                
+                log(`📄 Loaded sync file: ${workflow.name}`, 'success');
+                log(`📊 Nodes: ${workflow.nodes?.length || 0}`);
+                log(`🔗 Connections: ${workflow.connections?.length || 0}`);
+                
+                const result = validateFlow(workflow);
+                
+                if (result.isValid) {
+                    log('\n✅ SYNC FILE validation passed!', 'success');
+                    log('💡 The sync file is valid, so the issue must be elsewhere.', 'info');
+                } else {
+                    log('\n❌ SYNC FILE validation FAILED!', 'error');
+                    log('💡 This explains the validation errors in the force update!', 'warning');
+                }
+                
+            } catch (error) {
+                log(`❌ Error loading sync file: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-run tests when page loads
+        window.onload = () => {
+            log('🔧 Validator Debug Tool loaded', 'info');
+            log('Click test buttons to verify validation system...', 'info');
+        };
+    </script>
+</body>
+</html>

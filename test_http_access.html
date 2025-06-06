@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Workflow Sync HTTP Access</title>
+</head>
+<body>
+    <h1>Testing Workflow Sync File Access</h1>
+    <div id="results"></div>
+
+    <script>
+        async function testFileAccess() {
+            const files = [
+                '/workflow_sync/basic_input_1749181106265-6rs1e5uwq.json',
+                '/workflow_sync/my_awesome_workflow2_1749182392516-ju6lhmyge.json'
+            ];
+
+            const results = document.getElementById('results');
+            
+            for (const file of files) {
+                try {
+                    console.log(`Testing: ${file}`);
+                    const response = await fetch(file);
+                    const text = await response.text();
+                    
+                    results.innerHTML += `<h3>${file}</h3>`;
+                    
+                    if (response.ok) {
+                        try {
+                            const json = JSON.parse(text);
+                            results.innerHTML += `<p>✅ Success: Found JSON with ${Object.keys(json).length} properties</p>`;
+                            results.innerHTML += `<p>Name: ${json.name || 'N/A'}</p>`;
+                            results.innerHTML += `<p>ID: ${json.id || 'N/A'}</p>`;
+                        } catch (e) {
+                            results.innerHTML += `<p>❌ JSON Parse Error: ${e.message}</p>`;
+                            results.innerHTML += `<pre>${text.substring(0, 200)}...</pre>`;
+                        }
+                    } else {
+                        results.innerHTML += `<p>❌ HTTP Error: ${response.status}</p>`;
+                        results.innerHTML += `<pre>${text.substring(0, 200)}...</pre>`;
+                    }
+                } catch (error) {
+                    results.innerHTML += `<h3>${file}</h3>`;
+                    results.innerHTML += `<p>❌ Fetch Error: ${error.message}</p>`;
+                }
+                results.innerHTML += '<hr>';
+            }
+        }
+
+        // Test immediately
+        testFileAccess();
+    </script>
+</body>
+</html>

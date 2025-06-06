@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Workflow Sync System</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+        .section { margin: 25px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; }
+        button { padding: 12px 20px; margin: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .success { background: #28a745; color: white; }
+        .info { background: #17a2b8; color: white; }
+        .warning { background: #ffc107; color: #212529; }
+        .danger { background: #dc3545; color: white; }
+        #output { background: #1e1e1e; color: #00ff00; padding: 20px; border-radius: 8px; font-family: monospace; white-space: pre-wrap; min-height: 300px; margin-top: 20px; overflow-y: auto; max-height: 400px; }
+        .instructions { background: #e7f3ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #007cba; }
+        .step { margin: 10px 0; padding: 15px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #007cba; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Workflow Sync System</h1>
+        
+        <div class="instructions">
+            <h3>📋 Test Instructions:</h3>
+            <p>This tool will help you test the workflow sync system with the modified "my_awesome_workflow2" file.</p>
+            <ol>
+                <li><strong>Step 1:</strong> Load the modified workflow into the sync directory</li>
+                <li><strong>Step 2:</strong> Open ClaraVerse and go to Workflow Manager</li>
+                <li><strong>Step 3:</strong> Find "my_awesome_workflow2" and check if Force Update button appears</li>
+                <li><strong>Step 4:</strong> Click Force Update to apply the enhanced version</li>
+                <li><strong>Step 5:</strong> Verify the changes in the workflow editor</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>🔄 Step 1: Prepare Sync Directory</h2>
+            <div class="step">
+                <button onclick="loadEnhancedWorkflowToSync()" class="success">📥 Load Enhanced Workflow to Sync</button>
+                <p>This will add the enhanced workflow to your sync directory so ClaraVerse can detect it.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Step 2: Check Current State</h2>
+            <div class="step">
+                <button onclick="checkCurrentWorkflow()" class="info">🔍 Check Current Workflow in Database</button>
+                <button onclick="checkSyncDirectory()" class="info">📁 Check Sync Directory Status</button>
+                <p>Compare the current workflow in ClaraVerse database vs. the enhanced version in sync directory.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>⚡ Step 3: Manual Test (Optional)</h2>
+            <div class="step">
+                <button onclick="simulateForceUpdate()" class="warning">🚀 Simulate Force Update</button>
+                <p>This will manually apply the enhanced workflow to test the update process.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🧹 Cleanup</h2>
+            <div class="step">
+                <button onclick="resetToOriginal()" class="danger">🔄 Reset to Original</button>
+                <button onclick="clearLog()" class="info">🧹 Clear Log</button>
+                <p>Reset the workflow back to its original state or clear the test log.</p>
+            </div>
+        </div>
+
+        <div id="output">Click "Load Enhanced Workflow to Sync" to start testing...</div>
+    </div>
+
+    <script>
+        const DB_NAME = 'clara_db';
+        const DB_VERSION = 8;
+        const SYNC_DIR_KEY = 'clara_workflow_sync_directory';
+        const WORKFLOW_ID = '1749182392516-ju6lhmyge';
+
+        // Enhanced workflow data (loaded from the sync file)
+        const enhancedWorkflow = {
+            "id": "1749182392516-ju6lhmyge",
+            "name": "my_awesome_workflow2_enhanced",
+            "nodes": [
+                {
+                    "id": "1749182398374-8oe8npyum",
+                    "type": "input",
+                    "name": "Enhanced Data Input",
+                    "position": {
+                        "x": 14.095432620015458,
+                        "y": 349.4717394671025
+                    },
+                    "data": {
+                        "placeholder": "Enter your data here...",
+                        "validation": true,
+                        "defaultValue": "Sample input data"
+                    },
+                    "inputs": [],
+                    "outputs": [
+                        {
+                            "id": "output",
+                            "name": "Value",
+                            "type": "output",
+                            "dataType": "any",
+                            "description": "Enhanced input value with validation and defaults"
+                        }
+                    ],
+                    "metadata": {
+                        "tags": ["input", "enhanced", "validated", "source"],
+                        "documentation": "Enhanced input node with validation, placeholder text, and default values. Supports text, numbers, JSON objects, and provides real-time validation."
+                    }
+                },
+                {
+                    "id": "1749182406460-id2b4vjst",
+                    "type": "input",
+                    "name": "Secondary Input",
+                    "position": {
+                        "x": 750.6884109020186,
+                        "y": 361.00675254981843
+                    },
+                    "data": {
+                        "placeholder": "Enter secondary data...",
+                        "validation": false,
+                        "inputType": "text"
+                    },
+                    "inputs": [],
+                    "outputs": [
+                        {
+                            "id": "output",
+                            "name": "Value",
+                            "type": "output",
+                            "dataType": "any",
+                            "description": "Secondary input value for additional data"
+                        }
+                    ],
+                    "metadata": {
+                        "tags": ["input", "secondary", "optional", "source"],
+                        "documentation": "Secondary input for additional data processing. Optional field that can be used for extra parameters or configuration."
+                    }
+                },
+                {
+                    "id": "new-processor-node",
+                    "type": "processor",
+                    "name": "Data Processor",
+                    "position": {
+                        "x": 400,
+                        "y": 350
+                    },
+                    "data": {
+                        "operation": "combine",
+                        "format": "json"
+                    },
+                    "inputs": [
+                        {
+                            "id": "primary",
+                            "name": "Primary Data",
+                            "type": "input",
+                            "dataType": "any"
+                        },
+                        {
+                            "id": "secondary",
+                            "name": "Secondary Data",
+                            "type": "input",
+                            "dataType": "any"
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "id": "processed",
+                            "name": "Processed Data",
+                            "type": "output",
+                            "dataType": "object",
+                            "description": "Combined and processed data output"
+                        }
+                    ],
+                    "metadata": {
+                        "tags": ["processor", "combiner", "data-transformation"],
+                        "documentation": "Processes and combines input data from multiple sources into a structured output format."
+                    }
+                }
+            ],
+            "connections": [
+                {
+                    "id": "connection-1",
+                    "source": "1749182398374-8oe8npyum",
+                    "sourceOutput": "output",
+                    "target": "new-processor-node",
+                    "targetInput": "primary"
+                },
+                {
+                    "id": "connection-2",
+                    "source": "1749182406460-id2b4vjst",
+                    "sourceOutput": "output",
+                    "target": "new-processor-node",
+                    "targetInput": "secondary"
+                }
+            ],
+            "variables": [
+                {
+                    "id": "processing_mode",
+                    "name": "Processing Mode",
+                    "type": "string",
+                    "default": "standard",
+                    "options": ["standard", "enhanced", "minimal"]
+                },
+                {
+                    "id": "enable_validation",
+                    "name": "Enable Input Validation",
+                    "type": "boolean",
+                    "default": true
+                }
+            ],
+            "settings": {
+                "name": "my_awesome_workflow2_enhanced",
+                "version": "1.2.0",
+                "description": "Enhanced workflow with data processing and validation capabilities"
+            },
+            "createdAt": "2025-06-06T04:00:00.191Z",
+            "updatedAt": "2025-06-06T06:00:00.000Z",
+            "version": "1.2.0",
+            "tags": ["enhanced", "data-processing", "validation", "multi-input"]
+        };
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            output.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('output').textContent = '';
+        }
+
+        function loadEnhancedWorkflowToSync() {
+            try {
+                log('📥 Loading enhanced workflow to sync directory...', 'info');
+                
+                const syncDir = JSON.parse(localStorage.getItem(SYNC_DIR_KEY) || '{}');
+                
+                // Add the enhanced workflow to sync directory
+                syncDir[WORKFLOW_ID] = {
+                    name: enhancedWorkflow.name,
+                    lastSync: new Date().toISOString(),
+                    workflow: enhancedWorkflow
+                };
+                
+                localStorage.setItem(SYNC_DIR_KEY, JSON.stringify(syncDir, null, 2));
+                
+                log('✅ Enhanced workflow loaded to sync directory!', 'success');
+                log(`📝 Workflow Name: ${enhancedWorkflow.name}`);
+                log(`🔢 Version: ${enhancedWorkflow.version}`);
+                log(`📊 Nodes: ${enhancedWorkflow.nodes.length}`);
+                log(`🔗 Connections: ${enhancedWorkflow.connections.length}`);
+                log(`🏷️ Tags: ${enhancedWorkflow.tags.join(', ')}`);
+                log('');
+                log('🚀 Next steps:');
+                log('1. Open ClaraVerse application');
+                log('2. Go to Workflow Manager');
+                log('3. Find "my_awesome_workflow2"');
+                log('4. Click the three dots (⋮) menu');
+                log('5. You should see "Force Update" button');
+                log('6. Click it to apply the enhanced version!');
+                
+            } catch (error) {
+                log(`❌ Error loading to sync: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkCurrentWorkflow() {
+            try {
+                log('🔍 Checking current workflow in database...', 'info');
+                
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onsuccess = function(event) {
+                    const db = event.target.result;
+                    const transaction = db.transaction(['agent_workflows'], 'readonly');
+                    const store = transaction.objectStore('agent_workflows');
+                    
+                    store.get(WORKFLOW_ID).onsuccess = function(event) {
+                        const workflow = event.target.result;
+                        if (workflow) {
+                            log(`✅ Found workflow: ${workflow.name}`);
+                            log(`📅 Last updated: ${new Date(workflow.updatedAt).toLocaleString()}`);
+                            log(`🔢 Version: ${workflow.version || 'N/A'}`);
+                            log(`📊 Nodes: ${workflow.nodes ? workflow.nodes.length : 0}`);
+                            log(`🔗 Connections: ${workflow.connections ? workflow.connections.length : 0}`);
+                            log(`🏷️ Tags: ${(workflow.tags || []).join(', ') || 'None'}`);
+                            
+                            // Check if it's the enhanced version
+                            if (workflow.name.includes('enhanced')) {
+                                log('✅ Current workflow is the ENHANCED version', 'success');
+                            } else {
+                                log('⚠️ Current workflow is the ORIGINAL version', 'warning');
+                            }
+                        } else {
+                            log('❌ Workflow not found in database!', 'error');
+                        }
+                    };
+                };
+                
+            } catch (error) {
+                log(`❌ Error checking workflow: ${error.message}`, 'error');
+            }
+        }
+
+        function checkSyncDirectory() {
+            try {
+                log('📁 Checking sync directory status...', 'info');
+                
+                const syncDir = JSON.parse(localStorage.getItem(SYNC_DIR_KEY) || '{}');
+                const syncEntry = syncDir[WORKFLOW_ID];
+                
+                if (syncEntry) {
+                    log(`✅ Workflow found in sync directory!`, 'success');
+                    log(`📝 Sync Name: ${syncEntry.name}`);
+                    log(`📅 Last Sync: ${new Date(syncEntry.lastSync).toLocaleString()}`);
+                    log(`🔢 Version: ${syncEntry.workflow.version}`);
+                    log(`📊 Nodes: ${syncEntry.workflow.nodes.length}`);
+                    log(`🔗 Connections: ${syncEntry.workflow.connections.length}`);
+                    
+                    if (syncEntry.name.includes('enhanced')) {
+                        log('✅ Sync directory has the ENHANCED version', 'success');
+                    } else {
+                        log('⚠️ Sync directory has the ORIGINAL version', 'warning');
+                    }
+                } else {
+                    log('❌ Workflow not found in sync directory!', 'error');
+                    log('💡 Click "Load Enhanced Workflow to Sync" first');
+                }
+                
+            } catch (error) {
+                log(`❌ Error checking sync: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateForceUpdate() {
+            if (!confirm('This will update the workflow in the database with the enhanced version. Continue?')) {
+                return;
+            }
+
+            try {
+                log('🚀 Simulating force update...', 'warning');
+                
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onsuccess = function(event) {
+                    const db = event.target.result;
+                    const transaction = db.transaction(['agent_workflows'], 'readwrite');
+                    const store = transaction.objectStore('agent_workflows');
+                    
+                    // Update workflow with current timestamp
+                    const workflowToUpdate = { ...enhancedWorkflow };
+                    workflowToUpdate.updatedAt = new Date().toISOString();
+                    
+                    store.put(workflowToUpdate).onsuccess = function() {
+                        log('✅ Workflow updated successfully!', 'success');
+                        log('🔄 Refresh your ClaraVerse UI to see changes!', 'success');
+                        log('📝 Changes applied:');
+                        log('  • Name changed to "my_awesome_workflow2_enhanced"');
+                        log('  • Added new Data Processor node');
+                        log('  • Enhanced input nodes with validation');
+                        log('  • Added connections between nodes');
+                        log('  • Added workflow variables');
+                        log('  • Updated to version 1.2.0');
+                    };
+                };
+                
+            } catch (error) {
+                log(`❌ Error during simulation: ${error.message}`, 'error');
+            }
+        }
+
+        async function resetToOriginal() {
+            if (!confirm('This will reset the workflow back to its original state. Continue?')) {
+                return;
+            }
+
+            try {
+                log('🔄 Resetting to original workflow...', 'warning');
+                
+                const originalWorkflow = {
+                    "id": "1749182392516-ju6lhmyge",
+                    "name": "my_awesome_workflow2",
+                    "nodes": [
+                        {
+                            "id": "1749182398374-8oe8npyum",
+                            "type": "input",
+                            "name": "Input",
+                            "position": {
+                                "x": 14.095432620015458,
+                                "y": 349.4717394671025
+                            },
+                            "data": {},
+                            "inputs": [],
+                            "outputs": [
+                                {
+                                    "id": "output",
+                                    "name": "Value",
+                                    "type": "output",
+                                    "dataType": "any",
+                                    "description": "Input value"
+                                }
+                            ],
+                            "metadata": {
+                                "tags": ["input", "basic", "source"],
+                                "documentation": "Provides input values to start or feed the workflow. Supports text, numbers, and JSON objects."
+                            }
+                        },
+                        {
+                            "id": "1749182406460-id2b4vjst",
+                            "type": "input",
+                            "name": "Input",
+                            "position": {
+                                "x": 750.6884109020186,
+                                "y": 361.00675254981843
+                            },
+                            "data": {},
+                            "inputs": [],
+                            "outputs": [
+                                {
+                                    "id": "output",
+                                    "name": "Value",
+                                    "type": "output",
+                                    "dataType": "any",
+                                    "description": "Input value"
+                                }
+                            ],
+                            "metadata": {
+                                "tags": ["input", "basic", "source"],
+                                "documentation": "Provides input values to start or feed the workflow. Supports text, numbers, and JSON objects."
+                            }
+                        }
+                    ],
+                    "connections": [],
+                    "variables": [],
+                    "settings": {
+                        "name": "my_awesome_workflow2",
+                        "version": "1.0.0"
+                    },
+                    "createdAt": "2025-06-06T04:00:00.191Z",
+                    "updatedAt": new Date().toISOString(),
+                    "version": "1.0.0",
+                    "tags": []
+                };
+
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onsuccess = function(event) {
+                    const db = event.target.result;
+                    const transaction = db.transaction(['agent_workflows'], 'readwrite');
+                    const store = transaction.objectStore('agent_workflows');
+                    
+                    store.put(originalWorkflow).onsuccess = function() {
+                        log('✅ Workflow reset to original state!', 'success');
+                        log('🔄 Refresh your ClaraVerse UI to see changes!');
+                    };
+                };
+                
+            } catch (error) {
+                log(`❌ Error during reset: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-load on page start
+        window.addEventListener('load', () => {
+            log('🧪 Workflow Sync Test Tool Ready!');
+            log('💡 Click "Load Enhanced Workflow to Sync" to start testing');
+        });
+    </script>
+</body>
+</html>

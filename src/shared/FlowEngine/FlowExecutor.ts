@@ -1,5 +1,6 @@
 import { FlowNode, Connection, ExecutionLog } from '../../types/agent/types';
 import { NodeRegistry } from './NodeRegistry';
+import { WorkflowExecutionLogger, WorkflowExecutionLog } from '../../services/workflowLogger';
 
 export interface ExecutionContext {
   nodeId: string;
@@ -15,12 +16,18 @@ export interface FlowExecutorOptions {
   logLevel?: 'info' | 'warning' | 'error';
   timeout?: number;
   onExecutionLog?: (log: ExecutionLog) => void;
+  workflowId?: string;
+  workflowName?: string;
+  enableEnhancedLogging?: boolean;
+  onWorkflowLog?: (log: WorkflowExecutionLog) => void;
 }
 
 export class FlowExecutor {
   private nodeRegistry: NodeRegistry;
   private options: Required<FlowExecutorOptions>;
   private executionLogs: ExecutionLog[] = [];
+  private workflowLogger: WorkflowExecutionLogger;
+  private currentExecutionId: string | null = null;
 
   constructor(options: FlowExecutorOptions = {}) {
     this.nodeRegistry = new NodeRegistry();
@@ -29,8 +36,14 @@ export class FlowExecutor {
       logLevel: 'info',
       timeout: 30000,
       onExecutionLog: () => {},
+      workflowId: options.workflowId || 'unknown',
+      workflowName: options.workflowName || 'Unknown Workflow',
+      enableEnhancedLogging: options.enableEnhancedLogging ?? true,
+      onWorkflowLog: options.onWorkflowLog || (() => {}),
       ...options
     };
+    
+    this.workflowLogger = new WorkflowExecutionLogger();
   }
 
   private generateId(): string {
@@ -67,7 +80,20 @@ export class FlowExecutor {
     customNodes: any[] = []
   ): Promise<Record<string, any>> {
     this.executionLogs = [];
-    this.addLog('info', '🚀 Starting flow execution');
+    
+    // Start enhanced logging if enabled
+    if (this.options.enableEnhancedLogging) {
+      this.currentExecutionId = this.workflowLogger.startExecution(
+        this.options.workflowId,
+        this.options.workflowName,
+        inputs,
+        nodes.length
+      );
+    } else {
+      this.addLog('info', '🚀 Starting flow execution');
+    }
+    
+    let workflowLog: WorkflowExecutionLog | null = null;
     
     try {
       // Register custom nodes
@@ -75,7 +101,11 @@ export class FlowExecutor {
         this.nodeRegistry.registerCustomNode(customNode);
       }
 
-      this.addLog('info', `Flow has ${nodes.length} nodes`);
+      if (this.options.enableEnhancedLogging) {
+        this.workflowLogger.addLog('info', `Flow has ${nodes.length} nodes`, { nodeCount: nodes.length });
+      } else {
+        this.addLog('info', `Flow has ${nodes.length} nodes`);
+      }
       
       // Validate flow structure
       if (!nodes || !Array.isArray(nodes)) {
@@ -93,18 +123,35 @@ export class FlowExecutor {
         const inputValue = inputs[inputNode.name] || inputs[inputNode.id] || inputNode.data?.value;
         nodeOutputs.set(inputNode.id, { output: inputValue });
         executedNodes.add(inputNode.id);
-        this.addLog('info', `Input node ${inputNode.name}: ${inputValue}`, undefined, inputNode.id, inputNode.name);
+        
+        if (this.options.enableEnhancedLogging) {
+          this.workflowLogger.addLog('info', `Input node ${inputNode.name}: ${inputValue}`, 
+            { value: inputValue }, inputNode.id, inputNode.name, inputNode.type);
+        } else {
+          this.addLog('info', `Input node ${inputNode.name}: ${inputValue}`, undefined, inputNode.id, inputNode.name);
+        }
       }
       
       // Execute nodes in dependency order
       const executionOrder = this.getExecutionOrder(nodes, connections);
-      this.addLog('info', `📋 Execution order: ${executionOrder.map(n => n.name).join(' → ')}`);
+      
+      if (this.options.enableEnhancedLogging) {
+        this.workflowLogger.addLog('info', `📋 Execution order: ${executionOrder.map((n: FlowNode) => n.name).join(' → ')}`, 
+          { executionOrder: executionOrder.map((n: FlowNode) => ({ id: n.id, name: n.name, type: n.type })) });
+      } else {
+        this.addLog('info', `📋 Execution order: ${executionOrder.map((n: FlowNode) => n.name).join(' → ')}`);
+      }
       
       for (const node of executionOrder) {
         if (executedNodes.has(node.id)) continue;
         
         const nodeStartTime = Date.now();
-        this.addLog('info', `▶️ Executing: ${node.name} (${node.type})`, undefined, node.id, node.name);
+        
+        if (this.options.enableEnhancedLogging) {
+          this.workflowLogger.logNodeStart(node.id, node.name, node.type);
+        } else {
+          this.addLog('info', `▶️ Executing: ${node.name} (${node.type})`, undefined, node.id, node.name);
+        }
         
         try {
           // Get inputs for this node
@@ -115,9 +162,27 @@ export class FlowExecutor {
             nodeId: node.id,
             nodeName: node.name,
             nodeType: node.type,
-            log: (message, data) => this.addLog('info', `[${node.name}] ${message}`, data, node.id, node.name),
-            warn: (message, data) => this.addLog('warning', `[${node.name}] ${message}`, data, node.id, node.name),
-            error: (message, data) => this.addLog('error', `[${node.name}] ${message}`, data, node.id, node.name)
+            log: (message, data) => {
+              if (this.options.enableEnhancedLogging) {
+                this.workflowLogger.addLog('info', `[${node.name}] ${message}`, data, node.id, node.name, node.type);
+              } else {
+                this.addLog('info', `[${node.name}] ${message}`, data, node.id, node.name);
+              }
+            },
+            warn: (message, data) => {
+              if (this.options.enableEnhancedLogging) {
+                this.workflowLogger.addLog('warn', `[${node.name}] ${message}`, data, node.id, node.name, node.type);
+              } else {
+                this.addLog('warning', `[${node.name}] ${message}`, data, node.id, node.name);
+              }
+            },
+            error: (message, data) => {
+              if (this.options.enableEnhancedLogging) {
+                this.workflowLogger.addLog('error', `[${node.name}] ${message}`, data, node.id, node.name, node.type);
+              } else {
+                this.addLog('error', `[${node.name}] ${message}`, data, node.id, node.name);
+              }
+            }
           };
           
           // Execute the node
@@ -126,7 +191,11 @@ export class FlowExecutor {
           const nodeEndTime = Date.now();
           const nodeDuration = nodeEndTime - nodeStartTime;
           
-          this.addLog('success', `✅ ${node.name} completed successfully`, result, node.id, node.name, nodeDuration);
+          if (this.options.enableEnhancedLogging) {
+            this.workflowLogger.logNodeSuccess(node.id, node.name, node.type, result, nodeDuration);
+          } else {
+            this.addLog('success', `✅ ${node.name} completed successfully`, result, node.id, node.name, nodeDuration);
+          }
           
           // Store result
           nodeOutputs.set(node.id, result);
@@ -136,8 +205,12 @@ export class FlowExecutor {
           const nodeEndTime = Date.now();
           const nodeDuration = nodeEndTime - nodeStartTime;
           
-          this.addLog('error', `❌ ${node.name} failed: ${error instanceof Error ? error.message : String(error)}`, 
-            { error: error instanceof Error ? error.message : String(error) }, node.id, node.name, nodeDuration);
+          if (this.options.enableEnhancedLogging) {
+            this.workflowLogger.logNodeError(node.id, node.name, node.type, error as Error, nodeDuration);
+          } else {
+            this.addLog('error', `❌ ${node.name} failed: ${error instanceof Error ? error.message : String(error)}`, 
+              { error: error instanceof Error ? error.message : String(error) }, node.id, node.name, nodeDuration);
+          }
           
           throw error;
         }
@@ -152,11 +225,38 @@ export class FlowExecutor {
         results[outputNode.id] = outputValue;
       }
       
-      this.addLog('success', '🎉 Flow execution completed successfully');
+      // Complete the enhanced logging
+      if (this.options.enableEnhancedLogging) {
+        workflowLog = this.workflowLogger.completeExecution(results);
+        if (workflowLog) {
+          // Save log to file automatically
+          await this.workflowLogger.saveLogToFile(workflowLog);
+          
+          if (this.options.onWorkflowLog) {
+            this.options.onWorkflowLog(workflowLog);
+          }
+        }
+      } else {
+        this.addLog('success', '🎉 Flow execution completed successfully');
+      }
+      
       return results;
       
     } catch (error) {
-      this.addLog('error', `💥 Flow execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Complete the enhanced logging with error
+      if (this.options.enableEnhancedLogging) {
+        workflowLog = this.workflowLogger.completeExecution(undefined, error as Error);
+        if (workflowLog) {
+          // Save log to file automatically even on error
+          await this.workflowLogger.saveLogToFile(workflowLog);
+          
+          if (this.options.onWorkflowLog) {
+            this.options.onWorkflowLog(workflowLog);
+          }
+        }
+      } else {
+        this.addLog('error', `💥 Flow execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
       throw error;
     }
   }
@@ -244,4 +344,32 @@ export class FlowExecutor {
   clearLogs(): void {
     this.executionLogs = [];
   }
-} 
+  
+  // Enhanced logging methods
+  getWorkflowLogger(): WorkflowExecutionLogger {
+    return this.workflowLogger;
+  }
+  
+  getCurrentWorkflowLog(): WorkflowExecutionLog | null {
+    return this.workflowLogger.getCurrentLog();
+  }
+  
+  async exportCurrentLog(): Promise<void> {
+    const currentLog = this.workflowLogger.getCurrentLog();
+    if (currentLog) {
+      await this.workflowLogger.saveLogToFile(currentLog);
+    }
+  }
+  
+  addLogListener(listener: (log: any) => void): void {
+    if (this.options.enableEnhancedLogging) {
+      this.workflowLogger.addLogListener(listener);
+    }
+  }
+  
+  removeLogListener(listener: (log: any) => void): void {
+    if (this.options.enableEnhancedLogging) {
+      this.workflowLogger.removeLogListener(listener);
+    }
+  }
+}

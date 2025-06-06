@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Sync Directory</title>
+    <style>
+        body { font-family: monospace; margin: 20px; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        .section { margin: 20px 0; border: 1px solid #ddd; padding: 15px; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+        button { margin: 5px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Debug Sync Directory</h1>
+    
+    <div class="section">
+        <h2>Current localStorage Sync Directory Content</h2>
+        <button onclick="checkSyncDirectory()">Check Sync Directory</button>
+        <button onclick="clearSyncDirectory()">Clear Sync Directory</button>
+        <button onclick="loadEnhancedWorkflow()">Load Enhanced Workflow to Sync</button>
+        <pre id="syncContent"></pre>
+    </div>
+
+    <div class="section">
+        <h2>Actions</h2>
+        <button onclick="updateSyncFromFile()">Update Sync from Enhanced File</button>
+        <button onclick="checkWorkflowFile()">Check Workflow File Content</button>
+    </div>
+
+    <script>
+        const SYNC_DIR_KEY = 'clara_workflow_sync_directory';
+
+        function checkSyncDirectory() {
+            try {
+                const stored = localStorage.getItem(SYNC_DIR_KEY);
+                const syncDir = stored ? JSON.parse(stored) : {};
+                
+                const output = document.getElementById('syncContent');
+                output.innerHTML = `
+<span class="success">✅ Sync Directory Retrieved</span>
+
+<strong>Raw Content:</strong>
+${JSON.stringify(syncDir, null, 2)}
+
+<strong>Analysis:</strong>
+- Keys in sync directory: ${Object.keys(syncDir).length}
+- Keys: [${Object.keys(syncDir).join(', ')}]
+
+<strong>Workflow 1749182392516-ju6lhmyge Details:</strong>
+${syncDir['1749182392516-ju6lhmyge'] ? `
+- Name: ${syncDir['1749182392516-ju6lhmyge'].workflow?.name || 'N/A'}
+- Node Count: ${syncDir['1749182392516-ju6lhmyge'].workflow?.nodes?.length || 0}
+- Last Sync: ${syncDir['1749182392516-ju6lhmyge'].lastSync || 'N/A'}
+- Tags: [${(syncDir['1749182392516-ju6lhmyge'].workflow?.tags || []).join(', ')}]
+` : 'NOT FOUND in sync directory'}
+                `;
+            } catch (error) {
+                document.getElementById('syncContent').innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+
+        function clearSyncDirectory() {
+            localStorage.removeItem(SYNC_DIR_KEY);
+            document.getElementById('syncContent').innerHTML = '<span class="warning">⚠️ Sync directory cleared</span>';
+        }
+
+        async function loadEnhancedWorkflow() {
+            try {
+                // Load the enhanced workflow from the file
+                const response = await fetch('/workflow_sync/my_awesome_workflow2_1749182392516-ju6lhmyge.json');
+                const enhancedWorkflow = await response.json();
+                
+                // Update the sync directory
+                const syncDir = JSON.parse(localStorage.getItem(SYNC_DIR_KEY) || '{}');
+                syncDir['1749182392516-ju6lhmyge'] = {
+                    name: enhancedWorkflow.name,
+                    lastSync: new Date().toISOString(),
+                    workflow: enhancedWorkflow
+                };
+                
+                localStorage.setItem(SYNC_DIR_KEY, JSON.stringify(syncDir, null, 2));
+                
+                document.getElementById('syncContent').innerHTML = `
+<span class="success">✅ Enhanced workflow loaded to sync directory</span>
+
+<strong>Updated Workflow Details:</strong>
+- Name: ${enhancedWorkflow.name}
+- Node Count: ${enhancedWorkflow.nodes?.length || 0}
+- Tags: [${(enhancedWorkflow.tags || []).join(', ')}]
+- Version: ${enhancedWorkflow.version}
+
+<strong>Action:</strong> Now try the force update in ClaraVerse
+                `;
+            } catch (error) {
+                document.getElementById('syncContent').innerHTML = `<span class="error">❌ Error loading enhanced workflow: ${error.message}</span>`;
+            }
+        }
+
+        async function updateSyncFromFile() {
+            await loadEnhancedWorkflow();
+        }
+
+        async function checkWorkflowFile() {
+            try {
+                const response = await fetch('/workflow_sync/my_awesome_workflow2_1749182392516-ju6lhmyge.json');
+                const workflow = await response.json();
+                
+                document.getElementById('syncContent').innerHTML = `
+<span class="success">✅ Workflow File Content</span>
+
+<strong>File Details:</strong>
+- Name: ${workflow.name}
+- Node Count: ${workflow.nodes?.length || 0}
+- Tags: [${(workflow.tags || []).join(', ')}]
+- Version: ${workflow.version}
+- Updated At: ${workflow.updatedAt}
+
+<strong>Nodes:</strong>
+${workflow.nodes?.map(node => `- ${node.name} (${node.type})`).join('\n') || 'No nodes'}
+
+<strong>Full Content (first 500 chars):</strong>
+${JSON.stringify(workflow, null, 2).substring(0, 500)}...
+                `;
+            } catch (error) {
+                document.getElementById('syncContent').innerHTML = `<span class="error">❌ Error reading workflow file: ${error.message}</span>`;
+            }
+        }
+
+        // Auto-check on load
+        window.onload = () => {
+            checkSyncDirectory();
+        };
+    </script>
+</body>
+</html>

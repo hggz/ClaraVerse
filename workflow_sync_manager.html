@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClaraVerse Workflow Sync Manager</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; }
+        .section { margin: 20px 0; padding: 20px; border: 2px solid #e0e0e0; border-radius: 8px; background: #fafafa; }
+        button { padding: 12px 20px; margin: 5px; background: #007cba; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        button.danger { background: #dc3545; }
+        button.success { background: #28a745; }
+        #output { background: #f8f9fa; padding: 15px; border-radius: 5px; white-space: pre-wrap; margin: 20px 0; border-left: 4px solid #007cba; min-height: 100px; }
+        .workflow-card { margin: 10px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: white; }
+        .file-input { margin: 10px 0; padding: 15px; border: 2px dashed #ccc; border-radius: 5px; text-align: center; }
+        .instructions { background: #e7f3ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #007cba; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Workflow Sync Manager</h1>
+        
+        <div class="instructions">
+            <h3>📋 How It Works:</h3>
+            <ol>
+                <li><strong>Download Location:</strong> When you sync, files are downloaded to your Downloads folder for external editing</li>
+                <li><strong>Sync Directory:</strong> The system also stores workflows internally in localStorage for comparison</li>
+                <li><strong>File Upload:</strong> You can upload edited files here to update workflows</li>
+                <li><strong>Physical Files:</strong> You can also place files in the workflow_sync folder and load them</li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>📊 Current Sync Status</h2>
+            <button onclick="checkSyncStatus()">Check Sync Directory Status</button>
+            <button onclick="checkWorkflows()">Check All Workflows</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="section">
+            <h2>📁 Upload Workflow File</h2>
+            <div class="file-input">
+                <input type="file" id="workflowFile" accept=".json" style="display: none;" onchange="handleFileUpload()">
+                <button onclick="document.getElementById('workflowFile').click()">📁 Select JSON File</button>
+                <p>Upload a workflow JSON file to override your workflows</p>
+            </div>
+            <div>
+                <label for="targetWorkflowId">Target Workflow ID:</label>
+                <select id="targetWorkflowId">
+                    <option value="1749181106265-6rs1e5uwq">basic_input (1749181106265-6rs1e5uwq)</option>
+                    <option value="1749182392516-ju6lhmyge">my_awesome_workflow2 (1749182392516-ju6lhmyge)</option>
+                    <option value="custom">Custom ID (enter below)</option>
+                </select>
+                <input type="text" id="customWorkflowId" placeholder="Enter custom workflow ID" style="display: none; margin: 10px 0; padding: 8px; width: 300px;">
+            </div>
+            <button onclick="uploadAndUpdateWorkflow()" class="success">🔄 Upload & Update Workflow</button>
+        </div>
+
+        <div class="section">
+            <h2>💾 Quick Actions</h2>
+            <button onclick="saveYourWorkflowToSync()">💾 Save Your Workflow to Sync</button>
+            <button onclick="loadFromSyncDirectory()">📂 Load From Physical Files</button>
+            <button onclick="clearSyncDirectory()" class="danger">🗑️ Clear Sync Directory</button>
+        </div>
+
+        <div id="output">Click "Check Sync Status" to see current sync directory contents...</div>
+    </div>
+
+    <script>
+        const DB_NAME = 'clara_db';
+        const DB_VERSION = 8;
+        const SYNC_DIR_KEY = 'clara_workflow_sync_directory';
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            output.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('output').textContent = '';
+        }
+
+        // Your workflow data
+        const yourWorkflow = {
+            "id": "1749181106265-6rs1e5uwq",
+            "name": "basic_input",
+            "nodes": [
+                {
+                    "id": "1749182007323-o5va4dlr0",
+                    "type": "input",
+                    "name": "Input",
+                    "position": {
+                        "x": 45.40475384453009,
+                        "y": 161.61581212001443
+                    },
+                    "data": {},
+                    "inputs": [],
+                    "outputs": [
+                        {
+                            "id": "output",
+                            "name": "Value",
+                            "type": "output",
+                            "dataType": "any",
+                            "description": "Input value"
+                        }
+                    ],
+                    "metadata": {
+                        "tags": ["input", "basic", "source"],
+                        "documentation": "Provides input values to start or feed the workflow. Supports text, numbers, and JSON objects."
+                    }
+                }
+            ],
+            "connections": [],
+            "variables": [],
+            "settings": {
+                "name": "basic_input",
+                "version": "1.0.0"
+            },
+            "createdAt": "2025-06-06T03:46:04.523Z",
+            "updatedAt": "2025-06-06T03:53:31.613Z",
+            "version": "1.0.0",
+            "tags": []
+        };
+
+        function checkSyncStatus() {
+            clearLog();
+            try {
+                const syncDir = JSON.parse(localStorage.getItem(SYNC_DIR_KEY) || '{}');
+                const syncEntries = Object.keys(syncDir);
+                
+                log(`📊 Sync Directory Status:`);
+                log(`Total synced workflows: ${syncEntries.length}`);
+                log('═'.repeat(50));
+                
+                if (syncEntries.length === 0) {
+                    log('❌ No workflows in sync directory');
+                    log('💡 Use "Save Your Workflow to Sync" to add your workflow');
+                } else {
+                    syncEntries.forEach((workflowId, index) => {
+                        const entry = syncDir[workflowId];
+                        log(`${index + 1}. ${entry.name} (${workflowId})`);
+                        log(`   Last Sync: ${new Date(entry.lastSync).toLocaleString()}`);
+                        log(`   Updated: ${new Date(entry.workflow.updatedAt).toLocaleString()}`);
+                        log('');
+                    });
+                }
+                
+                // Check if your workflow is in sync
+                if (syncDir['1749181106265-6rs1e5uwq']) {
+                    log('✅ Your basic_input workflow is in sync directory');
+                } else {
+                    log('⚠️ Your basic_input workflow is NOT in sync directory');
+                }
+                
+            } catch (error) {
+                log(`❌ Error checking sync status: ${error.message}`, 'error');
+            }
+        }
+
+        function saveYourWorkflowToSync() {
+            try {
+                const syncDir = JSON.parse(localStorage.getItem(SYNC_DIR_KEY) || '{}');
+                
+                // Update the workflow with current timestamp
+                const updatedWorkflow = { ...yourWorkflow };
+                updatedWorkflow.updatedAt = new Date().toISOString();
+                
+                syncDir[yourWorkflow.id] = {
+                    name: yourWorkflow.name,
+                    lastSync: new Date().toISOString(),
+                    workflow: updatedWorkflow
+                };
+                
+                localStorage.setItem(SYNC_DIR_KEY, JSON.stringify(syncDir, null, 2));
+                
+                // Also save as downloadable file
+                const blob = new Blob([JSON.stringify(updatedWorkflow, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${yourWorkflow.name}_${yourWorkflow.id}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                log(`✅ Workflow "${yourWorkflow.name}" saved to sync directory`, 'success');
+                log(`📁 File also downloaded: ${yourWorkflow.name}_${yourWorkflow.id}.json`);
+                
+            } catch (error) {
+                log(`❌ Error saving workflow: ${error.message}`, 'error');
+            }
+        }
+
+        function handleFileUpload() {
+            const fileInput = document.getElementById('workflowFile');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                log(`📁 File selected: ${file.name}`);
+                log(`📊 File size: ${(file.size / 1024).toFixed(2)} KB`);
+            }
+        }
+
+        function getTargetWorkflowId() {
+            const select = document.getElementById('targetWorkflowId');
+            const customInput = document.getElementById('customWorkflowId');
+            
+            if (select.value === 'custom') {
+                return customInput.value.trim();
+            }
+            return select.value;
+        }
+
+        function uploadAndUpdateWorkflow() {
+            const fileInput = document.getElementById('workflowFile');
+            const file = fileInput.files[0];
+            const targetId = getTargetWorkflowId();
+            
+            if (!file) {
+                log('❌ Please select a file first', 'error');
+                return;
+            }
+            
+            if (!targetId) {
+                log('❌ Please specify a target workflow ID', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const workflowData = JSON.parse(e.target.result);
+                    
+                    // Preserve target ID and update timestamp
+                    workflowData.id = targetId;
+                    workflowData.updatedAt = new Date().toISOString();
+                    
+                    // Update in IndexedDB
+                    updateWorkflowInDB(workflowData);
+                    
+                } catch (error) {
+                    log(`❌ Error parsing JSON: ${error.message}`, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function updateWorkflowInDB(workflowData) {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            
+            request.onsuccess = function(event) {
+                const db = event.target.result;
+                const transaction = db.transaction(['agent_workflows'], 'readwrite');
+                const store = transaction.objectStore('agent_workflows');
+                
+                store.put(workflowData).onsuccess = function() {
+                    log(`✅ Workflow "${workflowData.name}" updated successfully!`, 'success');
+                    log(`🔄 Refresh your ClaraVerse UI to see changes`);
+                    
+                    // Also update sync directory
+                    const syncDir = JSON.parse(localStorage.getItem(SYNC_DIR_KEY) || '{}');
+                    syncDir[workflowData.id] = {
+                        name: workflowData.name,
+                        lastSync: new Date().toISOString(),
+                        workflow: workflowData
+                    };
+                    localStorage.setItem(SYNC_DIR_KEY, JSON.stringify(syncDir, null, 2));
+                    
+                    log(`💾 Sync directory also updated`);
+                };
+                
+                store.put(workflowData).onerror = function() {
+                    log(`❌ Failed to update workflow in database`, 'error');
+                };
+            };
+            
+            request.onerror = function() {
+                log('❌ Failed to open database', 'error');
+            };
+        }
+
+        function checkWorkflows() {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            
+            request.onsuccess = function(event) {
+                const db = event.target.result;
+                const transaction = db.transaction(['agent_workflows'], 'readonly');
+                const store = transaction.objectStore('agent_workflows');
+                
+                store.getAll().onsuccess = function(event) {
+                    const workflows = event.target.result;
+                    log(`📊 Found ${workflows.length} workflows in database:`);
+                    log('═'.repeat(50));
+                    
+                    workflows.forEach((workflow, index) => {
+                        log(`${index + 1}. ${workflow.name} (${workflow.id})`);
+                        log(`   Updated: ${new Date(workflow.updatedAt).toLocaleString()}`);
+                        log('');
+                    });
+                    
+                    // Check for your specific workflow
+                    const yourFlow = workflows.find(w => w.id === '1749181106265-6rs1e5uwq');
+                    if (yourFlow) {
+                        log(`✅ Your basic_input workflow found:`);
+                        log(`   Name: ${yourFlow.name}`);
+                        log(`   Nodes: ${yourFlow.nodes ? yourFlow.nodes.length : 0}`);
+                        log(`   Last Updated: ${new Date(yourFlow.updatedAt).toLocaleString()}`);
+                    }
+                };
+            };
+        }
+
+        function clearSyncDirectory() {
+            if (confirm('Are you sure you want to clear the sync directory? This cannot be undone.')) {
+                localStorage.removeItem(SYNC_DIR_KEY);
+                log('🗑️ Sync directory cleared', 'success');
+            }
+        }
+
+        // Show/hide custom ID input
+        document.getElementById('targetWorkflowId').addEventListener('change', function() {
+            const customInput = document.getElementById('customWorkflowId');
+            customInput.style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+
+        // Load on page ready
+        window.addEventListener('load', () => {
+            log('🚀 Workflow Sync Manager ready!');
+            log('💡 Your workflow data is loaded and ready to sync');
+        });
+    </script>
+</body>
+</html>

@@ -35,9 +35,31 @@ function copyPdfWorker(): PluginOption {
   };
 }
 
+// Function to serve workflow_sync directory files
+function serveWorkflowSync(): PluginOption {
+  return {
+    name: 'serve-workflow-sync',
+    configureServer(server) {
+      server.middlewares.use('/workflow_sync', (req, res, next) => {
+        const filePath = path.resolve(__dirname, 'workflow_sync', req.url?.slice(1) || '');
+        console.log('Serving workflow_sync file:', filePath);
+        
+        if (fs.existsSync(filePath) && path.extname(filePath) === '.json') {
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          const content = fs.readFileSync(filePath, 'utf-8');
+          res.end(content);
+        } else {
+          next();
+        }
+      });
+    }
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), copyPdfWorker()],
+  plugins: [react(), copyPdfWorker(), serveWorkflowSync()],
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
@@ -59,4 +81,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    fs: {
+      // Allow serving files from the workflow_sync directory
+      allow: ['..', 'workflow_sync']
+    }
+  },
+  publicDir: 'public'
 });

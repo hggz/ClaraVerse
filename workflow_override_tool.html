@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClaraVerse Workflow Override Tool</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #333; 
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .workflow-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .workflow-section h2 {
+            color: #007cba;
+            margin-top: 0;
+        }
+        textarea { 
+            width: 100%; 
+            height: 200px; 
+            margin: 10px 0; 
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: #fff;
+        }
+        button { 
+            padding: 12px 24px; 
+            margin: 10px 5px; 
+            background: #007cba; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        button:hover { 
+            background: #005a87; 
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #a02834;
+        }
+        button.success {
+            background: #28a745;
+        }
+        button.success:hover {
+            background: #1e7e34;
+        }
+        #output { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            white-space: pre-wrap; 
+            margin: 20px 0;
+            border-left: 4px solid #007cba;
+            min-height: 100px;
+        }
+        .instructions {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid #007cba;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .file-input-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .file-input-section:hover {
+            border-color: #007cba;
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 ClaraVerse Workflow Override Tool</h1>
+        
+        <div class="instructions">
+            <h3>📋 Instructions:</h3>
+            <ol>
+                <li><strong>Check Current Workflows:</strong> Click "Check Workflows" to see your existing workflows</li>
+                <li><strong>Override Method 1:</strong> Use the pre-made sample workflows below</li>
+                <li><strong>Override Method 2:</strong> Upload your own JSON workflow files</li>
+                <li><strong>Override Method 3:</strong> Edit the JSON directly in the text areas</li>
+                <li><strong>Apply Changes:</strong> Click the override buttons to update your workflows</li>
+                <li><strong>Refresh:</strong> Go back to your ClaraVerse application and refresh to see changes</li>
+            </ol>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 30px;">
+            <button onclick="checkCurrentWorkflows()" class="success">📊 Check Current Workflows</button>
+            <button onclick="clearLog()">🧹 Clear Log</button>
+            <button onclick="exportAllWorkflows()" style="background: #6f42c1;">📦 Export All Workflows</button>
+        </div>
+
+        <div id="output">Click "Check Current Workflows" to see your existing workflows...</div>
+
+        <!-- Basic Input Workflow Section -->
+        <div class="workflow-section">
+            <h2>🔹 Basic Input Workflow</h2>
+            <p><strong>Current ID:</strong> 1749181106265-6rs1e5uwq</p>
+            
+            <div class="file-input-section">
+                <input type="file" id="basicInputFile" accept=".json" style="display: none;" onchange="loadWorkflowFromFile('basicInputFile', 'basicInputJSON')">
+                <button onclick="document.getElementById('basicInputFile').click()">📁 Upload JSON File</button>
+                <p>Or drag and drop a JSON file here</p>
+            </div>
+            
+            <textarea id="basicInputJSON" placeholder="Edit the basic input workflow JSON here..."></textarea>
+            <div>
+                <button onclick="loadSampleBasicInput()">📄 Load Sample</button>
+                <button onclick="overrideBasicInput()" class="danger">🔄 Override Workflow</button>
+                <button onclick="validateJSON('basicInputJSON')">✅ Validate JSON</button>
+            </div>
+        </div>
+
+        <!-- Awesome Workflow Section -->
+        <div class="workflow-section">
+            <h2>⭐ My Awesome Workflow 2</h2>
+            <p><strong>Current ID:</strong> 1749182392516-ju6lhmyge</p>
+            
+            <div class="file-input-section">
+                <input type="file" id="awesomeWorkflowFile" accept=".json" style="display: none;" onchange="loadWorkflowFromFile('awesomeWorkflowFile', 'awesomeWorkflowJSON')">
+                <button onclick="document.getElementById('awesomeWorkflowFile').click()">📁 Upload JSON File</button>
+                <p>Or drag and drop a JSON file here</p>
+            </div>
+            
+            <textarea id="awesomeWorkflowJSON" placeholder="Edit the awesome workflow JSON here..."></textarea>
+            <div>
+                <button onclick="loadSampleAwesome()">📄 Load Sample</button>
+                <button onclick="overrideAwesome()" class="danger">🔄 Override Workflow</button>
+                <button onclick="validateJSON('awesomeWorkflowJSON')">✅ Validate JSON</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DB_NAME = 'clara_db';
+        const DB_VERSION = 8;
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            output.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('output').textContent = '';
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            document.body.appendChild(statusDiv);
+            setTimeout(() => document.body.removeChild(statusDiv), 5000);
+        }
+
+        // Sample workflows
+        const sampleBasicInput = {
+            "id": "1749181106265-6rs1e5uwq",
+            "name": "basic_input_updated",
+            "description": "Updated basic input workflow with enhanced functionality",
+            "nodes": [
+                {
+                    "id": "start-node",
+                    "type": "Start",
+                    "position": { "x": 100, "y": 100 },
+                    "data": {
+                        "label": "Enhanced Start",
+                        "description": "This is an updated start node with new features"
+                    }
+                },
+                {
+                    "id": "process-node",
+                    "type": "Process",
+                    "position": { "x": 300, "y": 100 },
+                    "data": {
+                        "label": "Advanced Processing",
+                        "description": "Enhanced processing with validation"
+                    }
+                },
+                {
+                    "id": "output-node",
+                    "type": "Output",
+                    "position": { "x": 500, "y": 100 },
+                    "data": {
+                        "label": "Enhanced Output",
+                        "description": "Output with improved formatting"
+                    }
+                }
+            ],
+            "connections": [
+                {
+                    "id": "connection-1",
+                    "source": "start-node",
+                    "target": "process-node"
+                },
+                {
+                    "id": "connection-2",
+                    "source": "process-node",
+                    "target": "output-node"
+                }
+            ],
+            "tags": ["input", "basic", "updated", "enhanced"],
+            "createdAt": "2024-12-08T00:00:00.000Z",
+            "updatedAt": new Date().toISOString(),
+            "metadata": {
+                "version": "2.0",
+                "lastModifiedBy": "override-tool"
+            }
+        };
+
+        const sampleAwesome = {
+            "id": "1749182392516-ju6lhmyge",
+            "name": "my_awesome_workflow2_enhanced",
+            "description": "Super enhanced awesome workflow with premium features",
+            "nodes": [
+                {
+                    "id": "input-node",
+                    "type": "Input",
+                    "position": { "x": 50, "y": 50 },
+                    "data": {
+                        "label": "Premium Input",
+                        "description": "Enhanced input with real-time validation"
+                    }
+                },
+                {
+                    "id": "ai-processing",
+                    "type": "AIProcessor",
+                    "position": { "x": 250, "y": 50 },
+                    "data": {
+                        "label": "AI Processing",
+                        "description": "Advanced AI-powered data processing"
+                    }
+                },
+                {
+                    "id": "analytics",
+                    "type": "Analytics",
+                    "position": { "x": 450, "y": 50 },
+                    "data": {
+                        "label": "Real-time Analytics",
+                        "description": "Live analytics and insights"
+                    }
+                },
+                {
+                    "id": "export-node",
+                    "type": "Export",
+                    "position": { "x": 650, "y": 50 },
+                    "data": {
+                        "label": "Multi-format Export",
+                        "description": "Export to multiple formats"
+                    }
+                }
+            ],
+            "connections": [
+                {
+                    "id": "conn-1",
+                    "source": "input-node",
+                    "target": "ai-processing"
+                },
+                {
+                    "id": "conn-2",
+                    "source": "ai-processing",
+                    "target": "analytics"
+                },
+                {
+                    "id": "conn-3",
+                    "source": "analytics",
+                    "target": "export-node"
+                }
+            ],
+            "tags": ["awesome", "enhanced", "ai", "premium", "v2.1"],
+            "createdAt": "2024-12-08T00:00:00.000Z",
+            "updatedAt": new Date().toISOString(),
+            "metadata": {
+                "version": "2.1",
+                "lastModifiedBy": "override-tool",
+                "features": ["ai-processing", "real-time-analytics", "multi-export"]
+            }
+        };
+
+        function loadSampleBasicInput() {
+            document.getElementById('basicInputJSON').value = JSON.stringify(sampleBasicInput, null, 2);
+            log('Sample basic input workflow loaded');
+        }
+
+        function loadSampleAwesome() {
+            document.getElementById('awesomeWorkflowJSON').value = JSON.stringify(sampleAwesome, null, 2);
+            log('Sample awesome workflow loaded');
+        }
+
+        function validateJSON(textareaId) {
+            try {
+                const content = document.getElementById(textareaId).value;
+                JSON.parse(content);
+                log('✅ JSON is valid', 'success');
+                showStatus('JSON is valid!', 'success');
+                return true;
+            } catch (error) {
+                log(`❌ JSON validation error: ${error.message}`, 'error');
+                showStatus(`JSON Error: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        function loadWorkflowFromFile(fileInputId, textareaId) {
+            const fileInput = document.getElementById(fileInputId);
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById(textareaId).value = e.target.result;
+                    log(`Loaded workflow from file: ${file.name}`);
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function overrideWorkflow(workflowData) {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onsuccess = function(event) {
+                    const db = event.target.result;
+                    const transaction = db.transaction(['agent_workflows'], 'readwrite');
+                    const store = transaction.objectStore('agent_workflows');
+                    
+                    const updateRequest = store.put(workflowData);
+                    
+                    updateRequest.onsuccess = function() {
+                        log(`✅ Successfully overrode workflow: ${workflowData.name}`, 'success');
+                        showStatus(`Successfully updated ${workflowData.name}!`, 'success');
+                        resolve();
+                    };
+                    
+                    updateRequest.onerror = function() {
+                        log(`❌ Failed to override workflow: ${workflowData.name}`, 'error');
+                        showStatus(`Failed to update ${workflowData.name}`, 'error');
+                        reject();
+                    };
+                };
+                
+                request.onerror = function() {
+                    log('❌ Failed to open database', 'error');
+                    showStatus('Database connection failed', 'error');
+                    reject();
+                };
+            });
+        }
+
+        function overrideBasicInput() {
+            if (!validateJSON('basicInputJSON')) return;
+            
+            try {
+                const workflowData = JSON.parse(document.getElementById('basicInputJSON').value);
+                workflowData.id = "1749181106265-6rs1e5uwq"; // Ensure correct ID
+                workflowData.updatedAt = new Date().toISOString();
+                overrideWorkflow(workflowData);
+            } catch (error) {
+                log(`❌ Error overriding basic input: ${error.message}`, 'error');
+            }
+        }
+
+        function overrideAwesome() {
+            if (!validateJSON('awesomeWorkflowJSON')) return;
+            
+            try {
+                const workflowData = JSON.parse(document.getElementById('awesomeWorkflowJSON').value);
+                workflowData.id = "1749182392516-ju6lhmyge"; // Ensure correct ID
+                workflowData.updatedAt = new Date().toISOString();
+                overrideWorkflow(workflowData);
+            } catch (error) {
+                log(`❌ Error overriding awesome workflow: ${error.message}`, 'error');
+            }
+        }
+
+        function checkCurrentWorkflows() {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            
+            request.onsuccess = function(event) {
+                const db = event.target.result;
+                const transaction = db.transaction(['agent_workflows'], 'readonly');
+                const store = transaction.objectStore('agent_workflows');
+                
+                store.getAll().onsuccess = function(event) {
+                    const workflows = event.target.result;
+                    log(`📊 Found ${workflows.length} workflows in database:`);
+                    
+                    workflows.forEach((workflow, index) => {
+                        log(`${index + 1}. "${workflow.name}" (ID: ${workflow.id})`);
+                        log(`   Description: ${workflow.description || 'No description'}`);
+                        log(`   Last Updated: ${new Date(workflow.updatedAt).toLocaleString()}`);
+                        log(`   Nodes: ${workflow.nodes ? workflow.nodes.length : 0}`);
+                        log('');
+                    });
+                    
+                    // Check for target workflows
+                    const basicInput = workflows.find(w => w.id === "1749181106265-6rs1e5uwq");
+                    const awesome = workflows.find(w => w.id === "1749182392516-ju6lhmyge");
+                    
+                    if (basicInput) {
+                        log(`✅ Found basic_input workflow: "${basicInput.name}"`);
+                    }
+                    if (awesome) {
+                        log(`✅ Found my_awesome_workflow2: "${awesome.name}"`);
+                    }
+                };
+            };
+        }
+
+        function exportAllWorkflows() {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            
+            request.onsuccess = function(event) {
+                const db = event.target.result;
+                const transaction = db.transaction(['agent_workflows'], 'readonly');
+                const store = transaction.objectStore('agent_workflows');
+                
+                store.getAll().onsuccess = function(event) {
+                    const workflows = event.target.result;
+                    
+                    const exportData = {
+                        exportDate: new Date().toISOString(),
+                        totalWorkflows: workflows.length,
+                        workflows: workflows
+                    };
+                    
+                    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+                        type: 'application/json'
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'all_workflows_backup.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    log(`📦 Exported ${workflows.length} workflows to file`);
+                };
+            };
+        }
+
+        // Load samples on page load
+        window.addEventListener('load', () => {
+            loadSampleBasicInput();
+            loadSampleAwesome();
+            log('🚀 Workflow Override Tool ready!');
+            log('💡 Tip: Always backup your workflows before making changes');
+        });
+    </script>
+</body>
+</html>

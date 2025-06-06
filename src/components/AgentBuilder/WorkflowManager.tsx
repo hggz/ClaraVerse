@@ -4,9 +4,7 @@ import {
   Star, 
   Trash2, 
   Download, 
-  Upload, 
   Eye, 
-  Clock, 
   Folder, 
   Filter,
   X,
@@ -16,14 +14,12 @@ import {
   Play,
   MoreVertical,
   Calendar,
-  FileText,
-  Tag,
   AlertCircle,
-  CheckCircle2
+  RotateCcw
 } from 'lucide-react';
 import { AgentFlow } from '../../types/agent/types';
 import { agentWorkflowStorage, WorkflowSearchOptions } from '../../services/agentWorkflowStorage';
-import { useAgentBuilder } from '../../contexts/AgentBuilder/AgentBuilderContext';
+import WorkflowSyncService from '../../services/workflowSyncService';
 
 interface WorkflowManagerProps {
   isOpen: boolean;
@@ -40,7 +36,6 @@ interface FilterOptions {
 }
 
 const WorkflowManager: React.FC<WorkflowManagerProps> = ({ isOpen, onClose, onLoadWorkflow }) => {
-  const { exportFlow } = useAgentBuilder();
   
   // State
   const [workflows, setWorkflows] = useState<AgentFlow[]>([]);
@@ -69,6 +64,9 @@ const WorkflowManager: React.FC<WorkflowManagerProps> = ({ isOpen, onClose, onLo
     setError(null);
     
     try {
+      console.log('🔄 loadWorkflows called with filters:', filters);
+      console.log('🔄 loadWorkflows called with searchQuery:', searchQuery);
+      
       const searchOptions: WorkflowSearchOptions = {
         query: searchQuery || undefined,
         isStarred: filters.showStarred || undefined,
@@ -78,7 +76,24 @@ const WorkflowManager: React.FC<WorkflowManagerProps> = ({ isOpen, onClose, onLo
         sortOrder: filters.sortOrder,
       };
 
+      console.log('📊 Fetching workflows from storage with options:', searchOptions);
       const allWorkflows = await agentWorkflowStorage.getAllWorkflows(searchOptions);
+      console.log(`📋 Loaded ${allWorkflows.length} workflows from storage`);
+      
+      // Log details of specific workflow if it exists
+      const targetWorkflow = allWorkflows.find(w => w.id === '1749182392516-ju6lhmyge');
+      if (targetWorkflow) {
+        console.log('🎯 Found target workflow:', {
+          id: targetWorkflow.id,
+          name: targetWorkflow.name,
+          updatedAt: targetWorkflow.updatedAt,
+          nodeCount: targetWorkflow.nodes?.length,
+          tags: targetWorkflow.tags
+        });
+      } else {
+        console.log('❌ Target workflow not found in loaded workflows');
+      }
+      
       setWorkflows(allWorkflows);
       setFilteredWorkflows(allWorkflows);
 
@@ -204,24 +219,177 @@ const WorkflowManager: React.FC<WorkflowManagerProps> = ({ isOpen, onClose, onLo
     setShowPreview(true);
   };
 
+  const handleSyncWorkflow = async (workflow: AgentFlow) => {
+    try {
+      const result = await WorkflowSyncService.syncWorkflow(workflow.id);
+      
+      if (result.success) {
+        // Show success message based on action
+        if (result.action === 'updated') {
+          // Workflow was updated from sync directory - reload workflows
+          await loadWorkflows();
+        }
+        
+        // You might want to show a toast notification here
+        console.log(`✅ Sync successful: ${result.message}`);
+        
+        // For now, we'll use a simple alert, but you could integrate a proper notification system
+        setTimeout(() => {
+          alert(result.message);
+        }, 100);
+        
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      setError('Failed to sync workflow');
+    }
+  };
+
+  const handleForceUpdateFromSync = async (workflow: AgentFlow) => {
+    try {
+      // Check if there's a sync file for this workflow
+      const syncFileName = `${workflow.name}_${workflow.id}.json`;
+      const syncResult = await WorkflowSyncService.checkSyncFileExists(syncFileName);
+      
+      if (!syncResult.exists) {
+        alert(`No sync file found for "${workflow.name}". Export the workflow first or create a sync file in the workflow_sync directory named: ${syncFileName}`);
+        return;
+      }
+
+      if (!window.confirm(`This will update "${workflow.name}" with the version from the sync directory (${syncFileName}). Continue?`)) {
+        return;
+      }
+
+      console.log('🔄 FORCE UPDATE STARTING for workflow:', workflow.id);
+      
+      // Capture current state BEFORE update
+      const oldWorkflow = workflows.find(w => w.id === workflow.id);
+      const beforeState = {
+        name: oldWorkflow?.name || 'N/A',
+        updatedAt: oldWorkflow?.updatedAt || 'N/A',
+        nodeCount: oldWorkflow?.nodes?.length || 0,
+        tags: oldWorkflow?.tags || [],
+        timestamp: Date.now()
+      };
+      
+      console.log('📊 BEFORE UPDATE:', beforeState);
+
+      // Force update using the sync service
+      const result = await WorkflowSyncService.forceUpdateFromSync(workflow.id, syncFileName);
+      
+      if (result.success) {
+        console.log('✅ WorkflowSyncService.forceUpdateFromSync returned success');
+        
+        // Wait a moment for database operations to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Reload workflows and wait for state to update
+        console.log('🔄 Calling loadWorkflows to refresh data...');
+        await loadWorkflows();
+        
+        // Wait for React state to update properly
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Capture state AFTER update by directly querying the database
+        console.log('🔍 Fetching fresh workflow data from database...');
+        const freshWorkflows = await agentWorkflowStorage.getAllWorkflows();
+        const newWorkflow = freshWorkflows.find(w => w.id === workflow.id);
+        
+        const afterState = {
+          name: newWorkflow?.name || 'N/A',
+          updatedAt: newWorkflow?.updatedAt || 'N/A',
+          nodeCount: newWorkflow?.nodes?.length || 0,
+          tags: newWorkflow?.tags || [],
+          timestamp: Date.now()
+        };
+        
+        console.log('📊 AFTER UPDATE (Database):', afterState);
+        
+        // Force a re-render and check state again after a longer delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Get the ACTUAL current React state by using a callback
+        let currentStateFromCallback: any = null;
+        setWorkflows(currentWorkflows => {
+          currentStateFromCallback = currentWorkflows.find(w => w.id === workflow.id);
+          return currentWorkflows; // Don't modify, just inspect
+        });
+        
+        // Wait a moment for the callback to execute
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const currentState = {
+          name: currentStateFromCallback?.name || 'N/A',
+          updatedAt: currentStateFromCallback?.updatedAt || 'N/A',
+          nodeCount: currentStateFromCallback?.nodes?.length || 0,
+          tags: currentStateFromCallback?.tags || [],
+          timestamp: Date.now()
+        };
+        
+        console.log('📊 CURRENT REACT STATE (via callback):', currentState);
+        
+        // Create comprehensive status message
+        const statusDetails = [
+          `✅ Force Update Result: ${result.message}`,
+          ``,
+          `📊 Detailed Analysis:`,
+          `• Workflow ID: ${workflow.id}`,
+          `• Sync File: ${syncFileName}`,
+          ``,
+          `🔍 BEFORE UPDATE (Original):`,
+          `• Name: "${beforeState.name}"`,
+          `• Updated: ${beforeState.updatedAt !== 'N/A' ? new Date(beforeState.updatedAt).toLocaleString() : 'N/A'}`,
+          `• Nodes: ${beforeState.nodeCount}`,
+          `• Tags: [${beforeState.tags.join(', ')}]`,
+          ``,
+          `🔍 AFTER UPDATE (Database):`,
+          `• Name: "${afterState.name}"`,
+          `• Updated: ${afterState.updatedAt !== 'N/A' ? new Date(afterState.updatedAt).toLocaleString() : 'N/A'}`,
+          `• Nodes: ${afterState.nodeCount}`,
+          `• Tags: [${afterState.tags.join(', ')}]`,
+          ``,
+          `🔍 CURRENT UI STATE (React):`,
+          `• Name: "${currentState.name}"`,
+          `• Updated: ${currentState.updatedAt !== 'N/A' ? new Date(currentState.updatedAt).toLocaleString() : 'N/A'}`,
+          `• Nodes: ${currentState.nodeCount}`,
+          `• Tags: [${currentState.tags.join(', ')}]`,
+          ``,
+          `🎯 CHANGE DETECTION:`,
+          `• Database Name Changed: ${beforeState.name !== afterState.name ? 'YES' : 'NO'}`,
+          `• Database Timestamp Changed: ${beforeState.updatedAt !== afterState.updatedAt ? 'YES' : 'NO'}`,
+          `• Database Nodes Changed: ${beforeState.nodeCount !== afterState.nodeCount ? 'YES' : 'NO'}`,
+          `• UI Reflects DB Changes: ${JSON.stringify(afterState) === JSON.stringify(currentState) ? 'YES' : 'NO'}`,
+          ``,
+          `🚨 TROUBLESHOOTING:`,
+          `• Total workflows in state: ${workflows.length}`,
+          `• Total workflows in DB: ${freshWorkflows.length}`,
+          `• Workflow found in state: ${currentStateFromCallback ? 'YES' : 'NO'}`,
+          `• Workflow found in DB: ${newWorkflow ? 'YES' : 'NO'}`,
+          ``,
+          `💡 If UI doesn't show changes:`,
+          `1. Check browser console for React errors`,
+          `2. Try closing/reopening this dialog`,
+          `3. State management might need debugging`,
+          `4. Consider force refresh of the page`
+        ].join('\n');
+        
+        alert(statusDetails);
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      setError('Failed to force update workflow from sync');
+      console.error('🚨 Force update error:', err);
+    }
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 1) return 'Today';
-    if (diffDays === 2) return 'Yesterday';
-    if (diffDays <= 7) return `${diffDays} days ago`;
-    return date.toLocaleDateString();
   };
 
   if (!isOpen) return null;
@@ -411,6 +579,8 @@ const WorkflowManager: React.FC<WorkflowManagerProps> = ({ isOpen, onClose, onLo
                   onExport={() => handleExportWorkflow(workflow)}
                   onDuplicate={() => handleDuplicateWorkflow(workflow)}
                   onPreview={() => handlePreviewWorkflow(workflow)}
+                  onSync={() => handleSyncWorkflow(workflow)}
+                  onForceUpdate={() => handleForceUpdateFromSync(workflow)}
                 />
               ))}
             </div>
@@ -444,6 +614,8 @@ interface WorkflowCardProps {
   onExport: () => void;
   onDuplicate: () => void;
   onPreview: () => void;
+  onSync: () => void;
+  onForceUpdate: () => void;
 }
 
 const WorkflowCard: React.FC<WorkflowCardProps> = ({
@@ -455,14 +627,23 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
   onStar,
   onExport,
   onDuplicate,
-  onPreview
+  onPreview,
+  onSync,
+  onForceUpdate
 }) => {
   const [showActions, setShowActions] = useState(false);
-  
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  };
+  const [hasSyncFile, setHasSyncFile] = useState(false);
+
+  // Check if sync file exists for this workflow
+  useEffect(() => {
+    const checkSyncFile = async () => {
+      const syncFileName = `${workflow.name}_${workflow.id}.json`;
+      const result = await WorkflowSyncService.checkSyncFileExists(syncFileName);
+      setHasSyncFile(result.exists);
+    };
+    
+    checkSyncFile();
+  }, [workflow.name, workflow.id]);
 
   return (
     <div
@@ -527,6 +708,23 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
                   Export
                 </button>
                 <button
+                  onClick={(e) => { e.stopPropagation(); onSync(); setShowActions(false); }}
+                  className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Sync
+                </button>
+                {hasSyncFile && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onForceUpdate(); setShowActions(false); }}
+                    className="w-full px-3 py-2 text-left text-xs hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center gap-2"
+                    title={`Force update from sync file: ${workflow.name}_${workflow.id}.json`}
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Force Update
+                  </button>
+                )}
+                <button
                   onClick={(e) => { e.stopPropagation(); onStar(); setShowActions(false); }}
                   className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                 >
@@ -563,7 +761,7 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-600">
           <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             <Calendar className="w-3 h-3" />
-            <span>{formatDate(workflow.updatedAt)}</span>
+            <span>{new Date(workflow.updatedAt).toLocaleDateString()}</span>
           </div>
           
           {workflow.tags && workflow.tags.length > 0 && (

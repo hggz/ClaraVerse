@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClaraVerse Workflow Checker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #output { background: #f5f5f5; padding: 15px; border-radius: 5px; white-space: pre-wrap; }
+        button { padding: 10px 20px; margin: 10px 0; background: #007cba; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #005a87; }
+    </style>
+</head>
+<body>
+    <h1>ClaraVerse Workflow Database Checker</h1>
+    <button onclick="checkWorkflows()">Check Workflows in IndexedDB</button>
+    <button onclick="exportWorkflows()">Export All Workflows</button>
+    <div id="output"></div>
+
+    <script>
+        const DB_NAME = 'clara_db';
+        const DB_VERSION = 8;
+
+        function log(message) {
+            const output = document.getElementById('output');
+            output.textContent += message + '\n';
+        }
+
+        function clearLog() {
+            document.getElementById('output').textContent = '';
+        }
+
+        function openDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                
+                request.onupgradeneeded = (event) => {
+                    log('Database upgrade needed, current version: ' + event.oldVersion);
+                };
+            });
+        }
+
+        function getAllWorkflows(db) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['agent_workflows'], 'readonly');
+                const store = transaction.objectStore('agent_workflows');
+                const request = store.getAll();
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+            });
+        }
+
+        async function checkWorkflows() {
+            clearLog();
+            try {
+                log('🔍 Checking for existing workflows in ClaraVerse...');
+                
+                const db = await openDatabase();
+                log('✅ Database opened successfully');
+                
+                const workflows = await getAllWorkflows(db);
+                log(`📊 Found ${workflows.length} workflows in storage`);
+                
+                if (workflows.length === 0) {
+                    log('❌ No workflows found in storage');
+                    return;
+                }
+                
+                log('\n📝 Workflow List:');
+                log('═'.repeat(50));
+                
+                workflows.forEach((workflow, index) => {
+                    log(`${index + 1}. ${workflow.name}`);
+                    log(`   ID: ${workflow.id}`);
+                    log(`   Description: ${workflow.description || 'No description'}`);
+                    log(`   Tags: ${(workflow.tags || []).join(', ') || 'None'}`);
+                    log(`   Created: ${new Date(workflow.createdAt).toLocaleDateString()}`);
+                    log(`   Updated: ${new Date(workflow.updatedAt).toLocaleDateString()}`);
+                    log(`   Nodes: ${workflow.nodes ? workflow.nodes.length : 'N/A'}`);
+                    log(`   Connections: ${workflow.connections ? workflow.connections.length : 'N/A'}`);
+                    log('');
+                });
+                
+                // Check for specific workflows
+                const basicInput = workflows.find(w => 
+                    w.name.toLowerCase().includes('basic_input') || 
+                    w.id.includes('basic_input')
+                );
+                const awesomeWorkflow = workflows.find(w => 
+                    w.name.toLowerCase().includes('my_awesome_workflow2') || 
+                    w.id.includes('my_awesome_workflow2')
+                );
+                
+                if (basicInput) {
+                    log('✅ Found "basic_input" workflow:');
+                    log(`   Full workflow object: ${JSON.stringify(basicInput, null, 2)}`);
+                }
+                
+                if (awesomeWorkflow) {
+                    log('✅ Found "my_awesome_workflow2" workflow:');
+                    log(`   Full workflow object: ${JSON.stringify(awesomeWorkflow, null, 2)}`);
+                }
+                
+                if (!basicInput && !awesomeWorkflow) {
+                    log('❌ Neither "basic_input" nor "my_awesome_workflow2" workflows found');
+                    log('Available workflow names:');
+                    workflows.forEach(w => log(`   - ${w.name}`));
+                }
+                
+                db.close();
+                
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                console.error('Full error:', error);
+            }
+        }
+
+        async function exportWorkflows() {
+            clearLog();
+            try {
+                log('📦 Exporting all workflows...');
+                
+                const db = await openDatabase();
+                const workflows = await getAllWorkflows(db);
+                
+                if (workflows.length === 0) {
+                    log('❌ No workflows to export');
+                    return;
+                }
+                
+                const exportData = {
+                    exportDate: new Date().toISOString(),
+                    totalWorkflows: workflows.length,
+                    workflows: workflows
+                };
+                
+                // Create downloadable file
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+                    type: 'application/json'
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'claraverse_workflows_export.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                log(`✅ Exported ${workflows.length} workflows to file`);
+                log('Check your Downloads folder for: claraverse_workflows_export.json');
+                
+                db.close();
+                
+            } catch (error) {
+                log(`❌ Export error: ${error.message}`);
+                console.error('Full error:', error);
+            }
+        }
+
+        // Auto-check workflows when page loads
+        window.addEventListener('load', () => {
+            setTimeout(checkWorkflows, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+{
+  "id": "1749181106265-6rs1e5uwq",
+  "name": "basic_input_modified",
+  "nodes": [
+    {
+      "id": "1749182007323-o5va4dlr0",
+      "type": "input",
+      "name": "Enhanced Input",
+      "position": {
+        "x": 45.40475384453009,
+        "y": 161.61581212001443
+      },
+      "data": {
+        "placeholder": "Enter your input here...",
+        "validation": true
+      },
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "output",
+          "name": "Value",
+          "type": "output",
+          "dataType": "any",
+          "description": "Enhanced input value with validation"
+        }
+      ],
+      "metadata": {
+        "tags": [
+          "input",
+          "basic",
+          "source",
+          "enhanced"
+        ],
+        "documentation": "Enhanced input node with validation and placeholder support. Provides input values to start or feed the workflow."
+      }
+    },
+    {
+      "id": "new-validation-node",
+      "type": "validation",
+      "name": "Input Validator",
+      "position": {
+        "x": 300,
+        "y": 161
+      },
+      "data": {
+        "rules": {
+          "required": true,
+          "minLength": 1
+        }
+      },
+      "inputs": [
+        {
+          "id": "input",
+          "name": "Input",
+          "type": "input",
+          "dataType": "any"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "valid",
+          "name": "Valid",
+          "type": "output",
+          "dataType": "any"
+        },
+        {
+          "id": "invalid",
+          "name": "Invalid",
+          "type": "output",
+          "dataType": "error"
+        }
+      ],
+      "metadata": {
+        "tags": ["validation", "quality"],
+        "documentation": "Validates input according to specified rules"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "connection-1",
+      "source": "1749182007323-o5va4dlr0",
+      "sourceOutput": "output",
+      "target": "new-validation-node",
+      "targetInput": "input"
+    }
+  ],
+  "variables": [
+    {
+      "id": "validation_enabled",
+      "name": "Enable Validation",
+      "type": "boolean",
+      "default": true
+    }
+  ],
+  "settings": {
+    "name": "basic_input_modified",
+    "version": "1.1.0",
+    "description": "Enhanced basic input workflow with validation"
+  },
+  "createdAt": "2025-06-06T03:46:04.523Z",
+  "updatedAt": "2025-06-06T05:00:00.000Z",
+  "version": "1.1.0",
+  "tags": ["input", "basic", "validation", "enhanced"]
+}

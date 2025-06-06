@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClaraVerse Simple Data Processing Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        .input-section, .output-section {
+            padding: 25px;
+            border-radius: 15px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+        }
+
+        .input-section {
+            border-left: 5px solid #4facfe;
+        }
+
+        .output-section {
+            border-left: 5px solid #00f2fe;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .process-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .process-btn:active {
+            transform: translateY(0);
+        }
+
+        .output-content {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 200px;
+            border: 2px dashed #ddd;
+            position: relative;
+        }
+
+        .output-content.has-data {
+            border: 2px solid #28a745;
+            border-style: solid;
+        }
+
+        .placeholder {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+            padding: 50px 20px;
+        }
+
+        .workflow-step {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .step-content {
+            font-family: 'Courier New', monospace;
+            background: #f1f3f4;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            overflow-x: auto;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .status-adult { background: #28a745; }
+        .status-minor { background: #ffc107; color: #333; }
+
+        .workflow-info {
+            grid-column: 1 / -1;
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .workflow-info h3 {
+            color: #1976d2;
+            margin-bottom: 15px;
+        }
+
+        .node-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .node-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .node-type {
+            font-weight: 600;
+            color: #1976d2;
+            margin-bottom: 5px;
+        }
+
+        .node-name {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 ClaraVerse Simple Data Processing Demo</h1>
+            <p>Experience data transformation using built-in node types</p>
+        </div>
+
+        <div class="content">
+            <div class="input-section">
+                <h2 class="section-title">
+                    <span>📝</span> Input Data
+                </h2>
+                
+                <div class="form-group">
+                    <label for="userName">👤 Person's Name:</label>
+                    <input type="text" id="userName" value="Alice Johnson" placeholder="Enter a name">
+                </div>
+
+                <div class="form-group">
+                    <label for="userAge">🎂 Age (years):</label>
+                    <input type="number" id="userAge" value="25" min="0" max="120" placeholder="Enter age">
+                </div>
+
+                <button class="process-btn" onclick="processData()">
+                    🚀 Process Data Through Workflow
+                </button>
+            </div>
+
+            <div class="output-section">
+                <h2 class="section-title">
+                    <span>📊</span> Workflow Output
+                </h2>
+                
+                <div id="outputContent" class="output-content">
+                    <div class="placeholder">
+                        Click "Process Data" to see the workflow in action!
+                    </div>
+                </div>
+            </div>
+
+            <div class="workflow-info">
+                <h3>🔧 Workflow Architecture</h3>
+                <p>This demo workflow uses only built-in ClaraVerse node types for maximum compatibility:</p>
+                
+                <div class="node-list">
+                    <div class="node-item">
+                        <div class="node-type">input</div>
+                        <div class="node-name">Name & Age Inputs</div>
+                    </div>
+                    <div class="node-item">
+                        <div class="node-type">json-parse</div>
+                        <div class="node-name">JSON Builder</div>
+                    </div>
+                    <div class="node-item">
+                        <div class="node-type">if-else</div>
+                        <div class="node-name">Age Verification</div>
+                    </div>
+                    <div class="node-item">
+                        <div class="node-type">json-parse</div>
+                        <div class="node-name">Profile Formatters</div>
+                    </div>
+                    <div class="node-item">
+                        <div class="node-type">output</div>
+                        <div class="node-name">Final Result</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function processData() {
+            const name = document.getElementById('userName').value || 'Anonymous';
+            const age = parseInt(document.getElementById('userAge').value) || 0;
+            
+            // Simulate workflow execution steps
+            const steps = [];
+            
+            // Step 1: Input Collection
+            steps.push({
+                title: "📥 Input Collection",
+                content: JSON.stringify({ name: name, age: age }, null, 2)
+            });
+
+            // Step 2: JSON Builder
+            const jsonObject = {
+                name: name,
+                age: age,
+                timestamp: new Date().toISOString(),
+                isAdult: age >= 18
+            };
+            
+            steps.push({
+                title: "🔧 JSON Builder Processing",
+                content: JSON.stringify(jsonObject, null, 2)
+            });
+
+            // Step 3: Age Verification
+            const isAdult = age >= 18;
+            steps.push({
+                title: "🔀 Age Verification Logic",
+                content: `Condition: age >= 18\nResult: ${age} >= 18 = ${isAdult}\nRouting to: ${isAdult ? 'Adult Formatter' : 'Minor Formatter'}`
+            });
+
+            // Step 4: Profile Formatting
+            let finalProfile;
+            if (isAdult) {
+                finalProfile = {
+                    profile: `${name} - Adult Profile`,
+                    age: age,
+                    status: 'verified_adult',
+                    permissions: ['full_access', 'voting', 'contracts']
+                };
+            } else {
+                finalProfile = {
+                    profile: `${name} - Minor Profile`,
+                    age: age,
+                    status: 'minor',
+                    permissions: ['limited_access', 'parental_supervision']
+                };
+            }
+
+            steps.push({
+                title: `✅ ${isAdult ? 'Adult' : 'Minor'} Profile Formatter`,
+                content: JSON.stringify(finalProfile, null, 2)
+            });
+
+            // Update the output display
+            displayWorkflowResults(steps, finalProfile, isAdult);
+        }
+
+        function displayWorkflowResults(steps, finalResult, isAdult) {
+            const outputDiv = document.getElementById('outputContent');
+            outputDiv.className = 'output-content has-data';
+            
+            let html = '';
+            
+            // Show workflow steps
+            steps.forEach((step, index) => {
+                html += `
+                    <div class="workflow-step">
+                        <div class="step-title">${index + 1}. ${step.title}</div>
+                        <div class="step-content">${step.content}</div>
+                    </div>
+                `;
+            });
+
+            // Show final result with status badge
+            html += `
+                <div class="workflow-step" style="border-left-color: ${isAdult ? '#28a745' : '#ffc107'};">
+                    <div class="step-title">
+                        🎯 Final Output 
+                        <span class="status-badge ${isAdult ? 'status-adult' : 'status-minor'}">
+                            ${isAdult ? 'ADULT' : 'MINOR'}
+                        </span>
+                    </div>
+                    <div class="step-content">${JSON.stringify(finalResult, null, 2)}</div>
+                </div>
+            `;
+
+            outputDiv.innerHTML = html;
+        }
+
+        // Process with default data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-process after a short delay to show the demo
+            setTimeout(processData, 1000);
+        });
+
+        // Process on enter key
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                processData();
+            }
+        });
+    </script>
+</body>
+</html>

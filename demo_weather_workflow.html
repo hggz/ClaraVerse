@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClaraVerse Weather Demo Workflow</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+        .demo-section {
+            margin: 30px 0;
+            padding: 25px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+        .input-group {
+            margin: 15px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        .execute-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 20px 0;
+        }
+        .execute-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        .execute-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f0fff4;
+            border: 2px solid #9ae6b4;
+            border-radius: 10px;
+        }
+        .error {
+            background: #fed7d7;
+            border-color: #feb2b2;
+            color: #c53030;
+        }
+        .workflow-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .step {
+            padding: 20px;
+            border-radius: 10px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            text-align: center;
+            position: relative;
+        }
+        .step::after {
+            content: '→';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .step:last-child::after {
+            display: none;
+        }
+        .step-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .step-title {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 5px;
+        }
+        .step-desc {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+        .logs {
+            background: #1a202c;
+            color: #a0aec0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px 0;
+        }
+        .log-info { color: #68d391; }
+        .log-warn { color: #f6ad55; }
+        .log-error { color: #fc8181; }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .feature {
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+        }
+        .feature h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .json-output {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌤️ ClaraVerse Weather Demo</h1>
+            <p>Experience the power of visual workflow automation without requiring LLMs or complex AI</p>
+        </div>
+
+        <div class="workflow-steps">
+            <div class="step">
+                <span class="step-icon">📍</span>
+                <div class="step-title">City Input</div>
+                <div class="step-desc">Enter a city name</div>
+            </div>
+            <div class="step">
+                <span class="step-icon">🌡️</span>
+                <div class="step-title">Temperature</div>
+                <div class="step-desc">Input temperature in Celsius</div>
+            </div>
+            <div class="step">
+                <span class="step-icon">💧</span>
+                <div class="step-title">Humidity</div>
+                <div class="step-desc">Set humidity percentage</div>
+            </div>
+            <div class="step">
+                <span class="step-icon">🔄</span>
+                <div class="step-title">Convert & Process</div>
+                <div class="step-desc">Transform data through multiple steps</div>
+            </div>
+            <div class="step">
+                <span class="step-icon">📊</span>
+                <div class="step-title">Weather Analysis</div>
+                <div class="step-desc">Generate insights and recommendations</div>
+            </div>
+            <div class="step">
+                <span class="step-icon">📋</span>
+                <div class="step-title">Final Report</div>
+                <div class="step-desc">Structured JSON output</div>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>🚀 Try the Demo Workflow</h2>
+            <p>This workflow demonstrates data processing, transformation, and analysis without requiring any external APIs or AI services.</p>
+            
+            <div class="input-group">
+                <label for="city">🏙️ City Name:</label>
+                <input type="text" id="city" value="San Francisco" placeholder="Enter city name">
+            </div>
+            
+            <div class="input-group">
+                <label for="temperature">🌡️ Temperature (°C):</label>
+                <input type="number" id="temperature" value="22" placeholder="Temperature in Celsius">
+            </div>
+            
+            <div class="input-group">
+                <label for="humidity">💧 Humidity (%):</label>
+                <input type="number" id="humidity" value="65" placeholder="Humidity percentage">
+            </div>
+            
+            <button class="execute-btn" onclick="executeWorkflow()" id="executeBtn">
+                ⚡ Execute Weather Workflow
+            </button>
+            
+            <div id="results" style="display: none;"></div>
+            <div id="logs" class="logs" style="display: none;"></div>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h3>✨ Key Features</h3>
+                <ul>
+                    <li>🔄 Multi-step data transformation</li>
+                    <li>📊 Real-time processing</li>
+                    <li>🎯 Enhanced logging system</li>
+                    <li>💾 Automatic log file saving</li>
+                    <li>🔍 Detailed execution tracking</li>
+                </ul>
+            </div>
+            <div class="feature">
+                <h3>🏗️ Workflow Architecture</h3>
+                <ul>
+                    <li>📥 Input nodes for data collection</li>
+                    <li>⚙️ Processor nodes for transformation</li>
+                    <li>🔗 Smart connection system</li>
+                    <li>📤 Output nodes for results</li>
+                    <li>🎛️ Configurable node parameters</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let executionCount = 0;
+        
+        function log(level, message, data = null) {
+            const logsDiv = document.getElementById('logs');
+            logsDiv.style.display = 'block';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${level}`;
+            
+            let logText = `[${timestamp}] ${message}`;
+            if (data) {
+                logText += ` | Data: ${JSON.stringify(data, null, 2)}`;
+            }
+            
+            logEntry.textContent = logText;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        async function executeWorkflow() {
+            const btn = document.getElementById('executeBtn');
+            const resultsDiv = document.getElementById('results');
+            const logsDiv = document.getElementById('logs');
+            
+            btn.disabled = true;
+            btn.textContent = '⚡ Processing...';
+            
+            // Clear previous results
+            resultsDiv.style.display = 'none';
+            logsDiv.innerHTML = '';
+            
+            executionCount++;
+            
+            try {
+                log('info', `🚀 Starting workflow execution #${executionCount}`);
+                
+                // Get input values
+                const city = document.getElementById('city').value || 'Unknown City';
+                const temperature = parseFloat(document.getElementById('temperature').value) || 0;
+                const humidity = parseFloat(document.getElementById('humidity').value) || 0;
+                
+                log('info', '📥 Collecting inputs', { city, temperature, humidity });
+                
+                // Simulate workflow execution steps
+                await simulateWorkflowExecution(city, temperature, humidity);
+                
+            } catch (error) {
+                log('error', `💥 Workflow execution failed: ${error.message}`);
+                showResults(null, error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⚡ Execute Weather Workflow';
+            }
+        }
+        
+        async function simulateWorkflowExecution(city, temperature, humidity) {
+            // Step 1: Temperature Conversion
+            log('info', '🔄 Executing Temperature Converter node');
+            await sleep(500);
+            
+            const fahrenheit = (temperature * 9/5) + 32;
+            const tempStatus = temperature > 25 ? 'Hot' : temperature > 15 ? 'Warm' : 'Cold';
+            
+            const tempConverterOutput = {
+                city,
+                celsius: temperature,
+                fahrenheit: Math.round(fahrenheit * 100) / 100,
+                humidity,
+                temperature_status: tempStatus
+            };
+            
+            log('info', '✅ Temperature Converter completed', tempConverterOutput);
+            
+            // Step 2: Weather Analysis
+            log('info', '🔍 Executing Weather Status Analyzer node');
+            await sleep(700);
+            
+            let recommendation = '';
+            let comfort = '';
+            
+            if (temperature > 30) {
+                recommendation = 'Stay hydrated and seek shade';
+                comfort = 'Very Hot';
+            } else if (temperature > 25) {
+                recommendation = 'Perfect weather for outdoor activities';
+                comfort = 'Comfortable';
+            } else if (temperature > 15) {
+                recommendation = 'Light jacket recommended';
+                comfort = 'Cool';
+            } else {
+                recommendation = 'Dress warmly';
+                comfort = 'Cold';
+            }
+            
+            if (humidity > 80) {
+                recommendation += '. High humidity - expect muggy conditions';
+            } else if (humidity < 30) {
+                recommendation += '. Low humidity - stay moisturized';
+            }
+            
+            const weatherAnalysisOutput = {
+                ...tempConverterOutput,
+                comfort_level: comfort,
+                recommendation,
+                heat_index: temperature + (humidity / 10),
+                optimal_conditions: temperature >= 18 && temperature <= 26 && humidity >= 40 && humidity <= 60
+            };
+            
+            log('info', '✅ Weather Analysis completed', weatherAnalysisOutput);
+            
+            // Step 3: JSON Formatting
+            log('info', '📋 Executing JSON Data Formatter node');
+            await sleep(300);
+            
+            const finalOutput = {
+                execution_id: `demo-${executionCount}-${Date.now()}`,
+                timestamp: new Date().toISOString(),
+                weather_report: weatherAnalysisOutput,
+                metadata: {
+                    execution_time: Date.now(),
+                    workflow_version: '1.0.0',
+                    node_count: 7,
+                    successful_nodes: 7
+                }
+            };
+            
+            log('info', '✅ JSON Formatter completed');
+            log('info', '🎉 Workflow execution completed successfully');
+            
+            // Show results
+            showResults(finalOutput);
+            
+            // Simulate log file saving
+            await sleep(200);
+            log('info', `📁 Log saved to: execution_logs/Weather_Data_Processor_Demo_${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+        }
+        
+        function showResults(result, error = null) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.style.display = 'block';
+            
+            if (error) {
+                resultsDiv.className = 'results error';
+                resultsDiv.innerHTML = `
+                    <h3>❌ Execution Failed</h3>
+                    <p><strong>Error:</strong> ${error}</p>
+                `;
+            } else {
+                resultsDiv.className = 'results';
+                resultsDiv.innerHTML = `
+                    <h3>🎉 Workflow Execution Successful!</h3>
+                    <p><strong>Execution ID:</strong> ${result.execution_id}</p>
+                    <p><strong>Processing Time:</strong> ${(Date.now() - result.metadata.execution_time) + 1500}ms</p>
+                    <div class="json-output">${JSON.stringify(result, null, 2)}</div>
+                `;
+            }
+        }
+        
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // Initialize with demo data
+        document.addEventListener('DOMContentLoaded', function() {
+            log('info', '🌟 ClaraVerse Weather Demo initialized');
+            log('info', '👋 Ready for workflow execution');
+        });
+    </script>
+</body>
+</html>

@@ -696,6 +696,83 @@ export class NodeRegistry {
       // If we've exhausted retries, throw the last error
       throw new Error(`API request failed after ${maxRetries} retries: ${lastError?.message || 'Unknown error'}`);
     });
+
+    // Processor Node - Basic data processing and transformation
+    this.nodeExecutors.set('processor', (node: FlowNode, inputs: Record<string, any>, context: ExecutionContext) => {
+      const operation = node.data.operation || 'passthrough';
+      
+      switch (operation) {
+        case 'temperature_conversion':
+          const celsius = inputs.celsius || 0;
+          const city = inputs.city || 'Unknown';
+          const humidity = inputs.humidity || 0;
+          const fahrenheit = (celsius * 9/5) + 32;
+          
+          return {
+            output: {
+              city,
+              celsius,
+              fahrenheit: Math.round(fahrenheit * 100) / 100,
+              humidity,
+              temperature_status: celsius > 25 ? 'Hot' : celsius > 15 ? 'Warm' : 'Cold'
+            }
+          };
+          
+        case 'weather_analysis':
+          const weatherData = inputs.weatherData || {};
+          const temp = weatherData.celsius || 0;
+          const hum = weatherData.humidity || 0;
+          
+          let recommendation = '';
+          let comfort = '';
+          
+          if (temp > 30) {
+            recommendation = 'Stay hydrated and seek shade';
+            comfort = 'Very Hot';
+          } else if (temp > 25) {
+            recommendation = 'Perfect weather for outdoor activities';
+            comfort = 'Comfortable';
+          } else if (temp > 15) {
+            recommendation = 'Light jacket recommended';
+            comfort = 'Cool';
+          } else {
+            recommendation = 'Dress warmly';
+            comfort = 'Cold';
+          }
+          
+          if (hum > 80) {
+            recommendation += '. High humidity - expect muggy conditions';
+          } else if (hum < 30) {
+            recommendation += '. Low humidity - stay moisturized';
+          }
+          
+          return {
+            output: {
+              ...weatherData,
+              comfort_level: comfort,
+              recommendation,
+              heat_index: temp + (hum / 10),
+              optimal_conditions: temp >= 18 && temp <= 26 && hum >= 40 && hum <= 60
+            }
+          };
+          
+        case 'data_formatter':
+          const inputData = inputs.input || inputs.data || {};
+          return {
+            output: {
+              formatted_data: JSON.stringify(inputData, null, 2),
+              data_type: typeof inputData,
+              size: JSON.stringify(inputData).length,
+              timestamp: new Date().toISOString()
+            }
+          };
+          
+        default:
+          // Passthrough - just pass the input as output
+          const passthroughInput = inputs.input || Object.values(inputs)[0] || inputs;
+          return { output: passthroughInput };
+      }
+    });
   }
 
   registerCustomNode(customNode: any): void {

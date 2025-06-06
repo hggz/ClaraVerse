@@ -1,0 +1,78 @@
+{
+  "id": "1749200000000-demo-simple",
+  "name": "Simple Demo Workflow",
+  "description": "A basic demonstration workflow using built-in nodes",
+  "nodes": [
+    {
+      "id": "input-node-1",
+      "type": "input",
+      "name": "Demo Input",
+      "position": {
+        "x": 100,
+        "y": 200
+      },
+      "data": {
+        "placeholder": "Enter demo text...",
+        "value": "Hello ClaraVerse"
+      },
+      "inputs": [],
+      "outputs": [
+        {
+          "id": "output",
+          "name": "Value",
+          "type": "output",
+          "dataType": "any",
+          "description": "Input value"
+        }
+      ],
+      "metadata": {
+        "tags": ["input", "demo", "source"],
+        "documentation": "Demo input node for testing"
+      }
+    },
+    {
+      "id": "output-node-1",
+      "type": "output",
+      "name": "Demo Output",
+      "position": {
+        "x": 400,
+        "y": 200
+      },
+      "data": {
+        "description": "Final output"
+      },
+      "inputs": [
+        {
+          "id": "input",
+          "name": "Input",
+          "type": "input",
+          "dataType": "any",
+          "description": "Data to output"
+        }
+      ],
+      "outputs": [],
+      "metadata": {
+        "tags": ["output", "demo", "sink"],
+        "documentation": "Demo output node for displaying results"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "connection-1",
+      "from": "input-node-1",
+      "to": "output-node-1",
+      "fromOutput": "output",
+      "toInput": "input"
+    }
+  ],
+  "variables": [],
+  "settings": {
+    "name": "Simple Demo Workflow",
+    "version": "1.0.0"
+  },
+  "createdAt": "2025-06-06T06:00:00.000Z",
+  "updatedAt": "2025-06-06T06:00:00.000Z",
+  "version": "1.0.0",
+  "tags": ["demo", "simple", "test"]
+}

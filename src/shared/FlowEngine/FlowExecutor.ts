@@ -1,6 +1,7 @@
 import { FlowNode, Connection, ExecutionLog } from '../../types/agent/types';
 import { NodeRegistry } from './NodeRegistry';
 import { WorkflowExecutionLogger, WorkflowExecutionLog } from '../../services/workflowLogger';
+import WorkflowAutoDiscovery from '../../services/workflowAutoDiscovery';
 
 export interface ExecutionContext {
   nodeId: string;
@@ -20,6 +21,8 @@ export interface FlowExecutorOptions {
   workflowName?: string;
   enableEnhancedLogging?: boolean;
   onWorkflowLog?: (log: WorkflowExecutionLog) => void;
+  enableAutoDiscovery?: boolean;
+  onWorkflowsDiscovered?: (count: number) => void;
 }
 
 export class FlowExecutor {
@@ -40,14 +43,88 @@ export class FlowExecutor {
       workflowName: options.workflowName || 'Unknown Workflow',
       enableEnhancedLogging: options.enableEnhancedLogging ?? true,
       onWorkflowLog: options.onWorkflowLog || (() => {}),
+      enableAutoDiscovery: options.enableAutoDiscovery ?? false,
+      onWorkflowsDiscovered: options.onWorkflowsDiscovered || (() => {}),
       ...options
     };
     
     this.workflowLogger = new WorkflowExecutionLogger();
+    
+    // Initialize auto-discovery if enabled
+    if (this.options.enableAutoDiscovery) {
+      this.initializeAutoDiscovery();
+    }
   }
 
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Initialize workflow auto-discovery service
+   */
+  private async initializeAutoDiscovery(): Promise<void> {
+    try {
+      if (this.options.enableLogging) {
+        console.log('🔍 Initializing workflow auto-discovery...');
+      }
+      
+      // Run initial discovery
+      const discoveryResult = await WorkflowAutoDiscovery.triggerDiscovery();
+      
+      if (discoveryResult.registered > 0) {
+        if (this.options.enableLogging) {
+          console.log(`✅ Auto-discovery found ${discoveryResult.registered} new workflows`);
+        }
+        
+        // Notify callback if provided
+        if (this.options.onWorkflowsDiscovered) {
+          this.options.onWorkflowsDiscovered(discoveryResult.registered);
+        }
+      }
+      
+      // Start automatic discovery service
+      WorkflowAutoDiscovery.startAutoDiscovery();
+      
+      // Listen for discovery events
+      if (typeof window !== 'undefined') {
+        window.addEventListener('clara:workflows-updated', (event: any) => {
+          const result = event.detail;
+          if (result.registered > 0 && this.options.onWorkflowsDiscovered) {
+            this.options.onWorkflowsDiscovered(result.registered);
+          }
+        });
+      }
+      
+    } catch (error) {
+      if (this.options.enableLogging) {
+        console.error('❌ Auto-discovery initialization failed:', error);
+      }
+    }
+  }
+
+  /**
+   * Manually trigger workflow discovery
+   */
+  async triggerWorkflowDiscovery(): Promise<any> {
+    try {
+      const result = await WorkflowAutoDiscovery.triggerDiscovery();
+      
+      if (this.options.enableLogging) {
+        console.log(`🔍 Manual discovery: ${result.discovered} files found, ${result.registered} registered`);
+      }
+      
+      if (result.registered > 0 && this.options.onWorkflowsDiscovered) {
+        this.options.onWorkflowsDiscovered(result.registered);
+      }
+      
+      return result;
+    } catch (error) {
+      if (this.options.enableLogging) {
+        console.error('❌ Manual discovery failed:', error);
+      }
+      throw error;
+    }
   }
 
   private addLog(level: 'info' | 'success' | 'warning' | 'error', message: string, data?: any, nodeId?: string, nodeName?: string, duration?: number): void {

@@ -1,0 +1,40 @@
+{
+  "id": "test-simple-no-connections",
+  "name": "Test Simple Workflow (No Connections)",
+  "description": "A test workflow with just nodes and no connections to test auto-discovery",
+  "nodes": [
+    {
+      "id": "input-test",
+      "name": "Test Input",
+      "type": "input",
+      "position": {
+        "x": 100,
+        "y": 200
+      },
+      "data": {
+        "value": "Hello World",
+        "inputType": "text",
+        "description": "A simple test input"
+      }
+    },
+    {
+      "id": "output-test",
+      "name": "Test Output",
+      "type": "output",
+      "position": {
+        "x": 400,
+        "y": 200
+      },
+      "data": {
+        "description": "A simple test output"
+      }
+    }
+  ],
+  "connections": [],
+  "metadata": {
+    "created": "2025-06-06T22:50:00Z",
+    "version": "1.0.0",
+    "tags": ["test", "simple", "no-connections"],
+    "category": "test"
+  }
+}

@@ -20,6 +20,7 @@ import {
 import { AgentFlow } from '../../types/agent/types';
 import { agentWorkflowStorage, WorkflowSearchOptions } from '../../services/agentWorkflowStorage';
 import WorkflowSyncService from '../../services/workflowSyncService';
+import WorkflowAutoDiscovery from '../../services/workflowAutoDiscovery';
 
 interface WorkflowManagerProps {
   isOpen: boolean;
@@ -49,6 +50,10 @@ const WorkflowManager: React.FC<WorkflowManagerProps> = ({ isOpen, onClose, onLo
   const [showFilters, setShowFilters] = useState(false);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [storageStats, setStorageStats] = useState<any>(null);
+  const [autoDiscoveryEnabled, setAutoDiscoveryEnabled] = useState(true);
+  const [discoveryStatus, setDiscoveryStatus] = useState<string | null>(null);
+  const [discoveryErrors, setDiscoveryErrors] = useState<string[]>([]);
+  const [showErrorDetails, setShowErrorDetails] = useState(false);
   
   const [filters, setFilters] = useState<FilterOptions>({
     sortBy: 'updatedAt',
@@ -118,8 +123,133 @@ const WorkflowManager: React.FC<WorkflowManagerProps> = ({ isOpen, onClose, onLo
   useEffect(() => {
     if (isOpen) {
       loadWorkflows();
+      
+      // Initialize auto-discovery if enabled
+      if (autoDiscoveryEnabled) {
+        initializeAutoDiscovery();
+      }
     }
-  }, [isOpen, loadWorkflows]);
+  }, [isOpen, loadWorkflows, autoDiscoveryEnabled]);
+
+  // Auto-discovery initialization
+  const initializeAutoDiscovery = useCallback(async () => {
+    try {
+      console.log('🚀 [WorkflowManager] Starting auto-discovery initialization...');
+      setDiscoveryStatus('🔍 Initializing auto-discovery...');
+      
+      // Run initial discovery
+      console.log('🔍 [WorkflowManager] Calling WorkflowAutoDiscovery.triggerDiscovery()...');
+      const result = await WorkflowAutoDiscovery.triggerDiscovery();
+      console.log('📊 [WorkflowManager] Discovery result:', {
+        success: result.success,
+        discovered: result.discovered,
+        registered: result.registered,
+        errors: result.errors,
+        workflowCount: result.workflows?.length || 0,
+        workflows: result.workflows
+      });
+      
+      if (result.registered > 0) {
+        console.log(`✅ [WorkflowManager] Found ${result.registered} new workflows, reloading...`);
+        setDiscoveryStatus(`✅ Auto-discovery found ${result.registered} new workflows`);
+        
+        // Reload workflows if new ones were found
+        await loadWorkflows();
+        
+        // Clear status after a few seconds
+        setTimeout(() => setDiscoveryStatus(null), 3000);
+      } else {
+        console.log('ℹ️ [WorkflowManager] No new workflows found');
+        console.log('🔍 [WorkflowManager] Discovery details:', {
+          totalDiscovered: result.discovered,
+          registrationErrors: result.errors
+        });
+        setDiscoveryStatus('ℹ️ No new workflows found');
+        setTimeout(() => setDiscoveryStatus(null), 2000);
+      }
+
+      // Listen for automatic discovery events
+      const handleWorkflowsUpdated = async (event: any) => {
+        const discoveryResult = event.detail;
+        if (discoveryResult.registered > 0) {
+          setDiscoveryStatus(`🔄 Auto-discovery: ${discoveryResult.registered} new workflows found`);
+          await loadWorkflows();
+          setTimeout(() => setDiscoveryStatus(null), 3000);
+        }
+      };
+
+      if (typeof window !== 'undefined') {
+        window.addEventListener('clara:workflows-updated', handleWorkflowsUpdated);
+        
+        // Cleanup listener on unmount
+        return () => {
+          window.removeEventListener('clara:workflows-updated', handleWorkflowsUpdated);
+        };
+      }
+
+    } catch (error) {
+      console.error('❌ Auto-discovery initialization failed:', error);
+      setDiscoveryStatus('❌ Auto-discovery failed');
+      setTimeout(() => setDiscoveryStatus(null), 3000);
+    }
+  }, [loadWorkflows]);
+
+  // Manual discovery trigger
+  const handleManualDiscovery = async () => {
+    try {
+      console.log('🔍 [WorkflowManager] Manual discovery triggered...');
+      setDiscoveryStatus('🔍 Scanning for workflows...');
+      
+      console.log('🔍 [WorkflowManager] Calling WorkflowAutoDiscovery.triggerDiscovery()...');
+      const result = await WorkflowAutoDiscovery.triggerDiscovery();
+      console.log('📊 [WorkflowManager] Manual discovery result:', {
+        success: result.success,
+        discovered: result.discovered,
+        registered: result.registered,
+        errors: result.errors,
+        workflowCount: result.workflows?.length || 0,
+        workflows: result.workflows
+      });
+      
+      if (result.registered > 0) {
+        console.log(`✅ [WorkflowManager] Manual discovery found ${result.registered} new workflows, reloading...`);
+        setDiscoveryStatus(`✅ Found ${result.registered} new workflows`);
+        await loadWorkflows();
+      } else {
+        console.log('ℹ️ [WorkflowManager] Manual discovery: No new workflows found');
+        console.log('🔍 [WorkflowManager] Manual discovery details:', {
+          totalDiscovered: result.discovered,
+          registrationErrors: result.errors,
+          workflowDetails: result.workflows
+        });
+        
+        // Show different messages based on what happened
+        if (result.errors && result.errors.length > 0) {
+          setDiscoveryStatus(`⚠️ Found ${result.discovered} workflows, ${result.errors.length} failed to import`);
+          setDiscoveryErrors(result.errors);
+          setShowErrorDetails(true);
+        } else if (result.discovered > 0) {
+          setDiscoveryStatus(`ℹ️ Found ${result.discovered} workflows (already imported)`);
+          setDiscoveryErrors([]);
+          setShowErrorDetails(false);
+        } else {
+          setDiscoveryStatus('ℹ️ No new workflows found');
+          setDiscoveryErrors([]);
+          setShowErrorDetails(false);
+        }
+      }
+      
+      setTimeout(() => setDiscoveryStatus(null), 3000);
+    } catch (error) {
+      console.error('❌ [WorkflowManager] Manual discovery failed:', error);
+      console.error('❌ [WorkflowManager] Manual discovery error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      setDiscoveryStatus('❌ Discovery failed');
+      setTimeout(() => setDiscoveryStatus(null), 3000);
+    }
+  };
 
   // Handlers
   const handleSearchChange = (query: string) => {
@@ -427,6 +557,15 @@ const WorkflowManager: React.FC<WorkflowManagerProps> = ({ isOpen, onClose, onLo
               Filters
             </button>
             <button
+              onClick={handleManualDiscovery}
+              disabled={loading}
+              className="px-3 py-2 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 rounded-lg text-green-700 dark:text-green-300 transition-colors disabled:opacity-50 flex items-center gap-2 text-sm font-medium"
+              title="Scan workflow_sync directory for new workflows"
+            >
+              <Search className="w-4 h-4" />
+              Auto-Scan
+            </button>
+            <button
               onClick={loadWorkflows}
               disabled={loading}
               className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50"
@@ -475,6 +614,35 @@ const WorkflowManager: React.FC<WorkflowManagerProps> = ({ isOpen, onClose, onLo
               {filters.sortOrder === 'asc' ? '↑' : '↓'}
             </button>
           </div>
+
+          {/* Auto-discovery Status */}
+          {discoveryStatus && (
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300">{discoveryStatus}</p>
+              
+              {/* Show error details if there are import errors */}
+              {discoveryErrors.length > 0 && (
+                <div className="mt-2">
+                  <button
+                    onClick={() => setShowErrorDetails(!showErrorDetails)}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    {showErrorDetails ? 'Hide' : 'Show'} error details
+                  </button>
+                  {showErrorDetails && (
+                    <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs">
+                      <div className="font-semibold text-red-700 dark:text-red-300 mb-1">Import Errors:</div>
+                      <ul className="text-red-600 dark:text-red-400 space-y-1">
+                        {discoveryErrors.map((error, index) => (
+                          <li key={index} className="text-xs">• {error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {showFilters && (
             <div className="flex items-center gap-4 py-3 border-t border-gray-200 dark:border-gray-700">

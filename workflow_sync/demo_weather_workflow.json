@@ -1,0 +1,173 @@
+{
+  "id": "simple-data-workflow-demo",
+  "name": "Simple Data Processing Demo", 
+  "description": "A demonstration workflow using only built-in nodes to process and transform data",
+  "nodes": [
+    {
+      "id": "input-name",
+      "name": "Name Input",
+      "type": "input",
+      "position": {
+        "x": 100,
+        "y": 200
+      },
+      "data": {
+        "value": "John Doe",
+        "inputType": "text",
+        "description": "Enter a person's name"
+      }
+    },
+    {
+      "id": "input-age",
+      "name": "Age Input", 
+      "type": "input",
+      "position": {
+        "x": 100,
+        "y": 300
+      },
+      "data": {
+        "value": "25",
+        "inputType": "number",
+        "description": "Enter age in years"
+      }
+    },
+    {
+      "id": "json-builder",
+      "name": "Build JSON Object",
+      "type": "json-parse",
+      "position": {
+        "x": 400,
+        "y": 250
+      },
+      "data": {
+        "operation": "build",
+        "template": {
+          "name": "{{name}}",
+          "age": "{{age}}",
+          "timestamp": "{{new Date().toISOString()}}",
+          "isAdult": "{{age >= 18}}"
+        },
+        "description": "Combine inputs into a JSON object"
+      }
+    },
+    {
+      "id": "age-check",
+      "name": "Age Verification",
+      "type": "if-else",
+      "position": {
+        "x": 700,
+        "y": 250
+      },
+      "data": {
+        "condition": "age >= 18",
+        "description": "Check if person is an adult"
+      }
+    },
+    {
+      "id": "adult-formatter",
+      "name": "Adult Profile",
+      "type": "json-parse",
+      "position": {
+        "x": 1000,
+        "y": 200
+      },
+      "data": {
+        "operation": "format",
+        "template": {
+          "profile": "{{name}} - Adult Profile",
+          "age": "{{age}}",
+          "status": "verified_adult",
+          "permissions": ["full_access", "voting", "contracts"]
+        },
+        "description": "Format data for adult users"
+      }
+    },
+    {
+      "id": "minor-formatter", 
+      "name": "Minor Profile",
+      "type": "json-parse",
+      "position": {
+        "x": 1000,
+        "y": 300
+      },
+      "data": {
+        "operation": "format",
+        "template": {
+          "profile": "{{name}} - Minor Profile", 
+          "age": "{{age}}",
+          "status": "minor",
+          "permissions": ["limited_access", "parental_supervision"]
+        },
+        "description": "Format data for minor users"
+      }
+    },
+    {
+      "id": "output-result",
+      "name": "Profile Output",
+      "type": "output",
+      "position": {
+        "x": 1300,
+        "y": 250
+      },
+      "data": {
+        "description": "Final formatted user profile"
+      }
+    }
+  ],
+  "connections": [
+    {
+      "from": "input-name",
+      "to": "json-builder",
+      "fromOutput": "output",
+      "toInput": "name"
+    },
+    {
+      "from": "input-age", 
+      "to": "json-builder",
+      "fromOutput": "output",
+      "toInput": "age"
+    },
+    {
+      "from": "input-age",
+      "to": "age-check", 
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "json-builder",
+      "to": "age-check",
+      "fromOutput": "output",
+      "toInput": "data"
+    },
+    {
+      "from": "age-check",
+      "to": "adult-formatter",
+      "fromOutput": "true",
+      "toInput": "input"
+    },
+    {
+      "from": "age-check",
+      "to": "minor-formatter",
+      "fromOutput": "false", 
+      "toInput": "input"
+    },
+    {
+      "from": "adult-formatter",
+      "to": "output-result",
+      "fromOutput": "output",
+      "toInput": "input"
+    },
+    {
+      "from": "minor-formatter",
+      "to": "output-result",
+      "fromOutput": "output",
+      "toInput": "input"
+    }
+  ],
+  "metadata": {
+    "created": "2025-06-06T00:00:00Z",
+    "version": "1.0.0",
+    "tags": ["demo", "data-processing", "simple", "built-in-nodes"],
+    "category": "demonstration"
+  }
+}

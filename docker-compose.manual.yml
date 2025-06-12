@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  clara_python:
+    image: clara17verse/clara-backend:latest
+    container_name: clara_python
+    ports:
+      - "5001:5000"
+    networks:
+      - clara_network
+    volumes:
+      - ~/.clara:/root/.clara
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OLLAMA_BASE_URL=http://clara_ollama:11434
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  clara_n8n:
+    image: n8nio/n8n:latest
+    container_name: clara_n8n
+    platform: linux/amd64  # Force AMD64 for ARM64 compatibility
+    ports:
+      - "5678:5678"
+    networks:
+      - clara_network
+    volumes:
+      - ~/.clara/n8n:/home/node/.n8n
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5678"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  clara_network:
+    driver: bridge
+
+volumes:
+  clara_data:
+    driver: local

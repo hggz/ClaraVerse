@@ -295,6 +295,9 @@ export interface ClaraChatSession {
   
   /** Session configuration */
   config?: ClaraSessionConfig;
+  
+  /** Message count (for light loading without full messages) */
+  messageCount?: number;
 }
 
 // ================================
@@ -403,6 +406,20 @@ export interface ClaraAIConfig {
     enableVision: boolean;
     autoModelSelection: boolean;
     enableMCP: boolean;
+  };
+
+  /** Artifact generation configuration */
+  artifacts?: {
+    enableCodeArtifacts: boolean;
+    enableChartArtifacts: boolean;
+    enableTableArtifacts: boolean;
+    enableMermaidArtifacts: boolean;
+    enableHtmlArtifacts: boolean;
+    enableMarkdownArtifacts: boolean;
+    enableJsonArtifacts: boolean;
+    enableDiagramArtifacts: boolean;
+    autoDetectArtifacts: boolean;
+    maxArtifactsPerMessage: number;
   };
   
   /** MCP configuration */

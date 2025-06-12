@@ -1,4 +1,3 @@
-import React from 'react';
 import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
@@ -12,6 +11,8 @@ import Help from './components/Help';
 import N8N from './components/N8N';
 import Servers from './components/Servers';
 import AgentStudio from './components/AgentStudio';
+import Lumaui from './components/Lumaui';
+import LumaUILite from './components/LumaUILite';
 import { db } from './db';
 import { InterpreterProvider } from './contexts/InterpreterContext';
 import { ProvidersProvider } from './contexts/ProvidersContext';
@@ -21,6 +22,7 @@ function App() {
   const [activePage, setActivePage] = useState(() => localStorage.getItem('activePage') || 'dashboard');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [userInfo, setUserInfo] = useState<{ name: string } | null>(null);
+  const [alphaFeaturesEnabled, setAlphaFeaturesEnabled] = useState(false);
 
   useEffect(() => {
     const checkUserInfo = async () => {
@@ -38,6 +40,10 @@ function App() {
     if (import.meta.env.DEV) {
       (window as typeof window & { db: typeof db }).db = db;
     }
+  }, []);
+
+  useEffect(() => {
+    db.getAlphaFeaturesEnabled?.().then(val => setAlphaFeaturesEnabled(!!val));
   }, []);
 
   const handleOnboardingComplete = async () => {
@@ -65,6 +71,8 @@ function App() {
       return <AgentStudio onPageChange={setActivePage} userName={userInfo?.name} />;
     }
     
+
+    
     if (activePage === 'image-gen') {
       return <ImageGen onPageChange={setActivePage} />;
     }
@@ -83,7 +91,7 @@ function App() {
 
     return (
       <div className="flex h-screen">
-        <Sidebar activePage={activePage} onPageChange={setActivePage} />
+        <Sidebar activePage={activePage} onPageChange={setActivePage} alphaFeaturesEnabled={alphaFeaturesEnabled} />
         
         <div className="flex-1 flex flex-col">
           <Topbar userName={userInfo?.name} onPageChange={setActivePage} />
@@ -92,11 +100,15 @@ function App() {
             {(() => {
               switch (activePage) {
                 case 'settings':
-                  return <Settings />;
+                  return <Settings alphaFeaturesEnabled={alphaFeaturesEnabled} setAlphaFeaturesEnabled={setAlphaFeaturesEnabled} />;
                 case 'debug':
                   return <Debug />;
                 case 'help':
                   return <Help />;
+                case 'lumaui':
+                  return <Lumaui onPageChange={setActivePage} />;
+                case 'lumaui-lite':
+                  return <LumaUILite />;
                 case 'dashboard':
                 default:
                   return <Dashboard onPageChange={setActivePage} />;

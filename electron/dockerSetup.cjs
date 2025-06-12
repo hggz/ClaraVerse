@@ -6,6 +6,7 @@ const os = require('os');
 const { app, dialog } = require('electron');
 const tar = require('tar-fs');
 const http = require('http');
+const { exec } = require('child_process');
 
 class DockerSetup extends EventEmitter {
   constructor() {
@@ -40,9 +41,10 @@ class DockerSetup extends EventEmitter {
       },
       n8n: {
         name: 'clara_n8n',
-        image: this.getArchSpecificImage('n8nio/n8n', 'latest'),
+        image: 'n8nio/n8n:latest', // Use standard image, Docker will handle platform emulation
         port: 5678,
         internalPort: 5678,
+        platform: 'linux/amd64', // Force AMD64 for n8n compatibility
         healthCheck: this.checkN8NHealth.bind(this),
         volumes: [
           `${path.join(this.appDataPath, 'n8n')}:/home/node/.n8n`
@@ -251,7 +253,14 @@ class DockerSetup extends EventEmitter {
     return new Promise((resolve, reject) => {
       statusCallback(`Pulling ${imageName} for ${this.systemArch}...`);
       
-      this.docker.pull(imageName, { platform: this.systemArch }, (err, stream) => {
+      // For n8n, force AMD64 platform since ARM64 isn't supported
+      let pullOptions = { platform: this.systemArch };
+      if (imageName.includes('n8nio/n8n')) {
+        pullOptions = { platform: 'linux/amd64' };
+        statusCallback(`Pulling ${imageName} for linux/amd64 (emulated on ${this.systemArch})...`);
+      }
+      
+      this.docker.pull(imageName, pullOptions, (err, stream) => {
         if (err) {
           console.error('Error pulling image:', err);
           reject(err);
@@ -363,6 +372,7 @@ class DockerSetup extends EventEmitter {
     // List of possible Docker socket locations
     const possibleSockets = [
       // Docker Desktop locations
+      path.join(os.homedir(), '.docker', 'run', 'docker.sock'),
       path.join(os.homedir(), '.docker', 'desktop', 'docker.sock'),
       path.join(os.homedir(), '.docker', 'docker.sock'),
       // Traditional Linux socket locations
@@ -424,6 +434,7 @@ class DockerSetup extends EventEmitter {
       // For other platforms, try to find a working socket synchronously
       const socketPaths = [
         process.env.DOCKER_HOST ? process.env.DOCKER_HOST.replace('unix://', '') : null,
+        path.join(os.homedir(), '.docker', 'run', 'docker.sock'),
         path.join(os.homedir(), '.docker', 'desktop', 'docker.sock'),
         path.join(os.homedir(), '.docker', 'docker.sock'),
         '/var/run/docker.sock',
@@ -585,6 +596,11 @@ class DockerSetup extends EventEmitter {
           'OLLAMA_BASE_URL=http://clara_ollama:11434'
         ]
       };
+
+      // Add platform specification if needed (for n8n)
+      if (config.platform) {
+        containerConfig.platform = config.platform;
+      }
 
       const newContainer = await this.docker.createContainer(containerConfig);
       console.log(`Container ${config.name} created, starting...`);
@@ -933,13 +949,23 @@ class DockerSetup extends EventEmitter {
   async checkN8NHealth() {
     try {
       const response = await new Promise((resolve, reject) => {
-        http.get(`http://localhost:${this.ports.n8n}/healthz`, (res) => {
+        const req = http.get(`http://localhost:${this.ports.n8n}`, (res) => {
+          // n8n returns 200 on the root path when healthy
           if (res.statusCode === 200) {
             resolve({ success: true });
           } else {
             reject(new Error(`N8N health check failed with status ${res.statusCode}`));
           }
-        }).on('error', (error) => reject(error));
+        });
+        
+        req.on('error', (error) => {
+          reject(error);
+        });
+        
+        req.setTimeout(5000, () => {
+          req.destroy();
+          reject(new Error('N8N health check timeout'));
+        });
       });
       return response;
     } catch (error) {

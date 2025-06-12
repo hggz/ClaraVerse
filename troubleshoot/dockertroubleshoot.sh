@@ -145,6 +145,7 @@ check_docker_sockets() {
     
     # Clara's socket search order (from dockerSetup.cjs)
     SOCKET_PATHS=(
+        "$HOME/.docker/run/docker.sock"
         "$HOME/.docker/desktop/docker.sock"
         "$HOME/.docker/docker.sock"
         "/var/run/docker.sock"
